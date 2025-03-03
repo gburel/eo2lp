@@ -53,6 +53,7 @@
 (define $remove_maybe_self ((l Bool) (C Bool))
     (eo::ite (eo::is_eq l C) false ($nary_remove or false l C)))
 
+
 ; define: $resolve
 ; args:
 ; - C1 Bool: The first formula in the resolution step.
@@ -160,13 +161,14 @@
     (Bool Bool) Bool
     (
         (($factor_literals xs (or l ls)) (eo::define ((cond (eo::is_neg (eo::list_find or xs l))))
-                                         (eo::define ((ret ($factor_literals
+                                          (eo::define ((ret ($factor_literals
                                                     (eo::ite cond (eo::cons or l xs) xs)
                                                     ls)))
                                             (eo::ite cond (eo::cons or l ret) ret))))
         (($factor_literals xs false)      false)
     )
 )
+
 
 ; rule: factoring
 ; implements: ProofRule::FACTORING

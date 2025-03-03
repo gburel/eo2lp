@@ -7,4 +7,11 @@
 (declare-const @list (-> (! Type :var T :implicit) T @List @List))
 ; remove :right-assoc-nil because we don't need it yet and it causes problems.
 
-
+(program-schema :right-assoc-nil $singleton_elim
+  ((T Type) (S Type) (U Type) (x S) (x1 T) (x2 T :list) (#cons (-> T T T)) (#nil T))
+  (S) S
+  (
+    (($singleton_elim (#cons x1 x2))  (eo::ite (eo::is_eq x2 #nil) x1 (#cons x1 x2)))
+    (($singleton_elim x)          x)
+  )
+)

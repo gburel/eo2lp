@@ -60,31 +60,39 @@ let rec elaborate_term imp sigg ctx (bvs : cc_context) trm =
     (Bind (bb, (x, ty', att), trm''), c1 @ c2)
 
 (* TODO. reimplement using sets rather than lists to avoid constraint duplication*)
-type equations = (cc_term * cc_term) list
+module Equation = struct
+  type t = (cc_term * cc_term)
+  let compare = compare
+end
 
-let string_of_constraints (eqs : equations) =
-  begin let eq_str = (fun (t1,t2) ->
-    Printf.sprintf "%s ≡ %s"
-    (string_of_term t1) (string_of_term t2))
+module EqSet = Set.Make(Equation)
+type eq_set = EqSet.t
+
+let string_of_equations (eqs : eq_set) =
+  begin let eq_str : Equation.t -> string =
+    (fun (t1,t2) ->
+      Printf.sprintf "%s ≡ %s"
+      (string_of_term t1) (string_of_term t2)
+    )
   in
     Printf.sprintf "⦃ %s ⦄"
-      (String.concat "; " (List.map eq_str eqs))
+      (String.concat "; " (List.map eq_str (EqSet.to_list eqs)))
   end
 
 let rec infer_type
     (sigg : cc_signature) (ctx : cc_context) (t : cc_term)
-  : (cc_term * equations) =
+  : (cc_term * eq_set) =
   if (not (is_var t)) && !debug_inference then
     Printf.printf "⊢ %s : ??\n" (string_of_term t);
 
   begin match t with
   | Univ KIND -> failwith "Cannot infer type of KIND."
-  | Univ TYPE -> (Univ KIND, [])
+  | Univ TYPE -> (Univ KIND, EqSet.empty)
   | Literal l ->
     begin match l with
-    | Numeral _ ->  (List.assoc NUM sigg.ltyps, [])
-    | Rational _ -> (List.assoc RAT sigg.ltyps, [])
-    | Decimal _ ->  (List.assoc DEC sigg.ltyps, [])
+    | Numeral _ ->  (List.assoc NUM sigg.ltyps, EqSet.empty)
+    | Rational _ -> (List.assoc RAT sigg.ltyps, EqSet.empty)
+    | Decimal _ ->  (List.assoc DEC sigg.ltyps, EqSet.empty)
     end
   | Implicit t -> infer_type sigg ctx t
   | Bound _ -> failwith "Encountered bound variable during type inference!"
@@ -95,14 +103,14 @@ let rec infer_type
       if !debug_inference then
         Printf.printf "⊢ %s : %s\n"
           (string_of_term t) (string_of_term ty);
-      (ty, [])
+      (ty, EqSet.empty)
     | None ->
       begin match lookup_cmd_opt sigg x with
       | Some (Decl (_, Some ty, _, _)) ->
         if !debug_inference then
           Printf.printf "⊢ %s : %s\n"
           (string_of_term t) (string_of_term ty);
-        (ty, [])
+        (ty, EqSet.empty)
       | None -> failwith ("Free variable found during elaboration: " ^ x)
       end
     end
@@ -112,9 +120,11 @@ let rec infer_type
     begin match f_ty with
     | Bind (Pi, (_, ty, _), body) ->
         let (arg_ty, fs) = infer_type sigg ctx arg in
-        let c' = if ty = arg_ty then [] else [(ty, arg_ty)] in
+        let c' = if ty = arg_ty
+          then EqSet.empty
+          else EqSet.singleton (ty, arg_ty) in
         let body' = subst arg 0 body in
-        (body', c' @ es @ fs)
+        (body', EqSet.union c' (EqSet.union es fs))
     | _ -> failwith "Applied function doesn't have a Π-type."
     end
 
@@ -130,7 +140,7 @@ let rec infer_type
       let ctx' = ((x,ty,att)::ctx) in
       let body' = Option.fold ~none:body ~some:(fun x -> (subst (Var x) 0 body)) x in
       let (u2, fs) = infer_type sigg ctx' body' in
-      if is_univ u2 then (u2, es @ fs)
+      if is_univ u2 then (u2, EqSet.union es fs)
       else failwith "Type of Π-body not a universe."
     else failwith "Type of Π-parameter type not a universe."
 
@@ -139,7 +149,7 @@ let rec infer_type
     let body' = Option.fold ~none:body ~some:(fun x -> (subst (Var x) 0 body)) x in
     let (ty, fs) = infer_type sigg ((x,def_ty,att)::ctx) body' in
     let ty' = subst def 0 ty in
-    (ty', es @ fs)
+    (ty', EqSet.union es fs)
 
 end
 (*substitution using de Brujin indices*)
@@ -204,7 +214,7 @@ match trm with
       apply_meta_subst msub body
     )
 
-let rec unify (ctx : cc_context) (cs : equations) (sigma : mvar_subst) : mvar_subst =
+let rec unify (ctx : cc_context) (cs : Equation.t list) (sigma : mvar_subst) : mvar_subst =
   match cs with
   | [] -> sigma
   | (t,u) :: js ->
@@ -213,9 +223,7 @@ let rec unify (ctx : cc_context) (cs : equations) (sigma : mvar_subst) : mvar_su
     let u' = whnf ctx (apply_meta_subst sigma u) in
     let msub_cs f = List.map (fun (m, t) -> (m, apply_meta_subst f t)) in
     match (t', u') with
-    | (Meta m, Meta m') when m = m' ->
-        (* They are the same meta, so it’s trivially satisfied. *)
-        unify ctx js sigma
+    | (Meta m, Meta m') when m = m' -> unify ctx js sigma
 
     | (Meta m, _) ->
         if occurs_check m u' then
@@ -247,10 +255,13 @@ let rec unify (ctx : cc_context) (cs : equations) (sigma : mvar_subst) : mvar_su
 
     | (Univ u1, Univ u2) when u1 = u2 ->
         unify ctx js sigma
+
     | (Var x, Var y) when x = y ->
         unify ctx js sigma
+
     | _ ->
         failwith "Unification failure"
+
 (* Does meta variable `m` occur in `term`? If so, return true; else false. *)
 and occurs_check (m : string) (term : cc_term) : bool =
   match term with
@@ -271,12 +282,12 @@ let infer sigg ctx bvs trm =
   if !debug_inference && trm' <> trm then
     Printf.printf "Elaborated term to %s\n" (string_of_term trm');
 
-  let (typ, c) = infer_type sigg (mvar_typs @ ctx) trm' in
+  let (typ, eqs) = infer_type sigg (mvar_typs @ ctx) trm' in
   if !debug_inference then
     Printf.printf "Found type %s with constraints %s\n"
-    (string_of_term typ) (string_of_constraints c);
+    (string_of_term typ) (string_of_equations eqs);
 
-  let msub = unify ctx c [] in
+  let msub = unify ctx (List.rev (EqSet.to_list eqs)) [] in
   if !debug_inference then
     Printf.printf "Found unifier %s\n" (string_of_meta_subst msub);
 
@@ -288,9 +299,9 @@ let infer_term sigg ctx trm =
   let (typ, eqs) = infer_type sigg (mvar_typs @ ctx) trm' in
   if !debug_inference then
     Printf.printf "Found type %s with constraints %s\n"
-    (string_of_term typ) (string_of_constraints eqs);
+    (string_of_term typ) (string_of_equations eqs);
 
-  let msub = unify ctx eqs [] in
+  let msub = unify ctx (List.rev (EqSet.to_list eqs)) [] in
   if !debug_inference then
     Printf.printf "Found unifier %s\n" (string_of_meta_subst msub);
 

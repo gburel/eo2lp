@@ -11,7 +11,7 @@ type tdata = {
 }
 
 let tdata_init =
-  let eo_typeof =
+  let init =
     let typ = mk_pi
       [
         (Some "S", Univ TYPE, { implicit=true; list=false });
@@ -19,12 +19,16 @@ let tdata_init =
       ]
         (Univ TYPE)
     in
-      Decl ("eo::typeof", Some typ, None, None)
+      [
+        Decl ("eo::typeof", Some typ, None, None);
+        Decl ("Bool", Some (Univ TYPE), None, None);
+        Decl ("Proof", Some (mk_pi_nameless [Var "Bool"] (Univ TYPE)), None, None);
+      ]
   in
   {
     asserts = 0;
     rschema = [];
-    signature = { cmds = [eo_typeof]; ltyps = [] };
+    signature = { cmds = init; ltyps = [] };
   }
 
 let tdata_ref = ref tdata_init
@@ -83,7 +87,8 @@ let rec eo_cc_term (ctx : cc_context) (bvs : cc_context) (trm : eo_term) : cc_te
   end
 
 and eo_var_cc ctx bvs (str,ty,att) : param =
-  (Some str, eo_cc_term ctx bvs ty, eo_decl_attr att)
+  let x = if str = "_" then None else Some str in
+  (x, eo_cc_term ctx bvs ty, eo_decl_attr att)
 
 and eo_define_cc ctx bvs vs trm =
   match vs with
@@ -121,21 +126,24 @@ and eo_match_cc ctx bvs ps trm rs =
     in
     let prog_ty_raw = mk_pi_nameless [ty_lhs] ty_rhs in
 
-    (* Create parameters for all bound variables appearing in rules. *)
-    let bound_params = map_bvars_list bvs (List.map (fun (l,r) -> App (l,r)) rs') in
-    let prog_ty = mk_pi bound_params prog_ty_raw in
+    (* Collect all variables are bound (e.g., by a lambda or pi),
+       or locally scoped (e.g., in a rule declaration. )    *)
+    let rule_trms = List.concat_map (fun (l,r) -> [l;r]) rs' in
+    let bound_params = map_bvars_list bvs rule_trms in
+    let free_params = map_filter_vars_list ctx rule_trms in
+    let prog_ty = mk_pi (bound_params @ free_params) prog_ty_raw in
 
-    let prog_hd = appvar prog_name (List.map
-        (fun (x,_,_) ->
-          match List.find_index (fun (y,_,_) -> x = y) bvs with
-          | Some n -> Bound n
-          | None -> Var (Option.get x)
-        ) bound_params) in
-    let prog_rs = List.map (fun (l,r) -> (App (prog_hd, l), r)) rs' in
+    let bound_vars = List.map param_var bound_params in
+    let free_vars = List.map param_var free_params in
+
+    let prog_app = appvar prog_name (bound_vars @ free_vars)
+ in
+    let prog_rules = List.map
+      (fun (l,r) -> (App (prog_app, l), r)) rs' in
     let prog_sig =
       [
         Decl (prog_name, Some prog_ty, None, Some Sequential);
-        Rule (ps', prog_rs)
+        Rule (ps' @ bound_params @ free_params, prog_rules)
       ]
     in
 
@@ -152,8 +160,18 @@ and eo_match_cc ctx bvs ps trm rs =
         cmds = prog_sig @ !tdata_ref.signature.cmds }
     };
 
+    (* Make correct indices for bound variables within match rules to be exported. *)
+    let bounds = List.map (fun (x,_,_) ->
+      match List.find_index (fun (y,_,_) -> x = y) bvs with
+      | Some n -> Bound n
+      | None -> Var (Option.get x)
+    ) bound_params in
+
     (* Return application of auxillary program to matched term. *)
-    App (prog_hd, eo_cc_term ctx bvs trm)
+    App (
+      appvar prog_name (bounds @ free_vars),
+      eo_cc_term ctx bvs trm
+    )
   end
 
 and eo_arrow_cc ctx bvs args =
@@ -164,7 +182,8 @@ and eo_arrow_cc ctx bvs args =
     let p = eo_var_cc ctx bvs (mk_eo_var typ) in
     Bind (Pi, p, eo_arrow_cc ctx (p::bvs) ts)
 
-and eo_cc_rule ctx bvs (lhs,rhs) = (eo_cc_term ctx bvs lhs, eo_cc_term ctx bvs rhs)
+and eo_cc_rule ctx bvs (lhs,rhs) =
+  (eo_cc_term ctx bvs lhs, eo_cc_term ctx bvs rhs)
 
 let eo_decl_attr ctx bvs (att : attr) =
   match att with
@@ -176,6 +195,7 @@ let eo_decl_attr ctx bvs (att : attr) =
   | ("pairwise",  Some trm) -> Pairwise (eo_cc_term ctx bvs trm)
   | ("binder",    Some trm) -> Binder (eo_cc_term ctx bvs trm)
   | _ -> failwith "Unknown declaration attribute."
+
 
 let base_cmd_cc (cmd : base_command) : cc_command list =
   match cmd with
@@ -234,7 +254,7 @@ let base_cmd_cc (cmd : base_command) : cc_command list =
   | DeclareDatatype _ -> failwith "DeclareDatatype"
   | DeclareDatatypes _ -> failwith "DeclareDatatypes"
 
-let exc_cmd_cc (cmd : exc_command) =
+let eunoia_cmd_cc (cmd : eunoia_command) =
   match cmd with
   | Define (str, vs, trm) ->
     let rec eo_lambda_cc ctx bvs (vs : eo_var list) body =
@@ -281,44 +301,61 @@ let exc_cmd_cc (cmd : exc_command) =
       | Some eo_pts ->
 
         (*translate all argument patterns, get free variables.*)
-        let pts = List.map (eo_cc_term ctx []) eo_pts in
-        let pts_tys = List.map (infer (!tdata_ref.signature) ctx []) pts in
-        let pt_params = map_filter_vars ctx pts in
+        let ptrns = List.map (eo_cc_term ctx []) eo_pts in
+        let ptrn_tys = List.map (infer (!tdata_ref.signature) ctx []) ptrns in
+        let ptrn_params = map_filter_vars ctx ptrns in
 
-        (* construct the rewrite rule for the auxillary function. *)
-        let aux_explicits = ParamSet.to_list (ParamSet.diff rule_params pt_params) in
-        let lhs = appvar (str ^ "_aux") (List.map param_var (aux_explicits) @ pts) in
+        if List.exists (fun trm -> not (is_var trm)) ptrns then
+          (* construct the rewrite rule for the auxillary function. *)
+          let aux_explicits = ParamSet.to_list
+            (ParamSet.diff rule_params ptrn_params) in
+          let lhs = appvar (str ^ "_aux")
+            (List.map param_var (aux_explicits) @ ptrns) in
 
-        (* construct type for auxillary function. *)
-        let aux_params = aux_explicits @ ParamSet.to_list pt_params in
-        let aux_typ_raw = mk_pi aux_params (Univ TYPE) in
-        let aux_implicits = List.map (fun (x,ty,p) ->
-          (x, ty, {implicit = true; list = p.list})
-          ) (filter_vars_list ctx aux_typ_raw) in
-        let aux_typ = mk_pi aux_implicits aux_typ_raw in
+          (* construct type for auxillary function. *)
+          let aux_typ_binds = List.map (fun ty ->
+            (None, ty, {implicit = false; list = false})) ptrn_tys in
+          let aux_typ_raw = mk_pi aux_typ_binds (Univ TYPE) in
 
-        let arg_vars = List.mapi (fun i ty ->
-            (Some ("_arg" ^ string_of_int (i+1)), ty,
-            {implicit = false; list = false})
-          ) pts_tys in
+          let aux_implicits = List.map (fun (x,ty,p) ->
+            (x, ty, {implicit = true; list = p.list}))
+            (filter_vars_list ctx aux_typ_raw) in
+          let aux_typ = mk_pi aux_implicits aux_typ_raw in
 
-        let rule_typ_body = appvar (str ^ "_aux") (
-          List.map param_var (aux_explicits @ arg_vars))
-        in
-        (* bind variables in type body. *)
-        let rule_typ = mk_pi
-          (aux_implicits @ aux_explicits @ arg_vars) rule_typ_body
-        in
+          let arg_vars = List.mapi (fun i ty ->
+              (Some ("_arg" ^ string_of_int (i+1)), ty,
+              {implicit = false; list = false})
+            ) ptrn_tys in
 
-        [
-          Decl (str ^ "_aux", Some aux_typ, None, None);
-          Rule (ctx, [(lhs, rule_typ_raw)]);
-          Decl (str, Some rule_typ, None, None)
-        ]
+          let rule_typ_body = appvar (str ^ "_aux") (
+            List.map param_var (aux_explicits @ arg_vars)) in
+          (* bind variables in type body. *)
+          let rule_typ = mk_pi
+            (aux_implicits @ aux_explicits @ arg_vars) rule_typ_body in
+          let rule_typ' =
+            mk_pi (filter_vars_list ctx rule_typ) rule_typ in
+
+          let aux_decl = Decl (str ^ "_aux", Some aux_typ, None, None); in
+          let sig' = { !tdata_ref.signature
+            with cmds = aux_decl :: !tdata_ref.signature.cmds } in
+          let rs' = map_cc_rule (infer_term sig' ctx) [(lhs, rule_typ_raw)] in
+
+          aux_decl :: [
+            Rule (ctx, rs');
+            Decl (str, Some rule_typ', None, None)
+          ]
+        else
+          let rule_typ = mk_pi
+            (ParamSet.to_list (ParamSet.union ptrn_params rule_params))
+            rule_typ_raw in
+          let rule_typ' = mk_pi
+            (filter_vars_list ctx rule_typ) rule_typ in
+
+            [ Decl (str, Some rule_typ', None, None) ]
 
       | None ->
         let rule_typ_binds = List.map (fun (x,ty,att) ->
-            (x,ty,{implicit = true; list = att.list})
+          (x, ty, {implicit = true; list = att.list})
         ) (ParamSet.to_list rule_params)
         in
 
@@ -343,14 +380,16 @@ let exc_cmd_cc (cmd : exc_command) =
     let ctx = List.map (eo_var_cc [] []) eo_ps in
     let ty_raw = eo_arrow_cc ctx [] (dom_tys @ [ran_ty]) in
     let ty_binds = List.map (fun (x,ty,p) ->
-      (x, ty, {implicit = true; list = p.list})
-      ) (filter_vars_list ctx ty_raw) in
+      (x, ty, {implicit = true; list = p.list}))
+      (filter_vars_list ctx ty_raw) in
+
     let ty = mk_pi ty_binds ty_raw in
     let prog_decl = Decl (str, Some ty, None, Some Sequential) in
 
     let rs = List.map (eo_cc_rule ctx []) eo_rs in
-    let rs' = map_cc_rule (infer_term (
-      {!tdata_ref.signature with cmds = prog_decl :: !tdata_ref.signature.cmds }) ctx) rs in
+    let sig' = { !tdata_ref.signature
+      with cmds = prog_decl :: !tdata_ref.signature.cmds } in
+    let rs' = map_cc_rule (infer_term sig' ctx) rs in
 
     begin match att_str_opt with
       | Some str ->
@@ -377,8 +416,6 @@ let exc_cmd_cc (cmd : exc_command) =
       | None -> [prog_decl; Rule (ctx, rs') ]
     end
   | Reference _ -> failwith "undefined"
-
-
 
 let proof_cmd_cc (cmd : proof_command) : cc_command list =
   match cmd with
@@ -414,6 +451,6 @@ let eo_cc (cmd : eo_command) =
   | None -> (); in
   match cmd with
   | Base cmd -> base_cmd_cc cmd
-  | EO cmd -> exc_cmd_cc cmd
+  | EO cmd -> eunoia_cmd_cc cmd
   | Ctrl _ -> []
-  | Prf _ -> []
+  | Prf cmd -> proof_cmd_cc cmd

@@ -12,6 +12,8 @@ let eo_files = [
   "cpc-less/theories/Builtin.eo";
   "cpc-less/rules/Builtin.eo";
   "cpc-less/rules/Booleans-less.eo";
+  "cpc-less/rules/Rewrites-less.eo";
+  "test/rodin/smt1468783596909311386.smt2.prf";
   (* "cpc-less/rules/Uf.eo"; *)
   (* "cpc-less/rules/Arith.eo"; *)
 ]

@@ -1,16 +1,31 @@
 #!/usr/bin/env python3
+import argparse
 import glob
 import subprocess
 import re
 from collections import Counter
-# import os
+import sys
 
 def main():
-    # Recursively find all .smt2 files in the current directory.
-    smt2_files = glob.glob("**/*.smt2", recursive=True)
-    if not smt2_files:
-        print("No .smt2 files found in the directory recursively.")
-        return
+    parser = argparse.ArgumentParser(
+        description="Process SMT2 proofs using cvc5. Supply either a directory (-d) to search recursively for .smt2 files or a single file (-f) to process."
+    )
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-d", "--directory", help="Directory to recursively search for .smt2 files")
+    group.add_argument("-f", "--file", help="Single SMT2 file to process")
+
+    args = parser.parse_args()
+
+    # Determine the list of files to process
+    if args.directory:
+        # Use glob to recursively find all .smt2 files in the provided directory.
+        smt2_files = glob.glob(f"{args.directory}/**/*.smt2", recursive=True)
+        if not smt2_files:
+            print(f"No .smt2 files found in directory '{args.directory}' recursively.")
+            sys.exit(1)
+    else:
+        # A single file was provided.
+        smt2_files = [args.file]
 
     rule_counter = Counter()
 
@@ -38,11 +53,15 @@ def main():
             print(f"Error running cvc5 on {filename}: {e.stderr}")
             continue
 
+        # Remove the first line (e.g., the "unsat"/"sat" message) from the proof output.
+        lines = output.splitlines()
+        proof_output = "\n".join(lines[1:]) if len(lines) > 1 else ""
+
         # Write the proof output to a file with the extension .prf (e.g., file.smt2.prf).
         prf_filename = f"{filename}.prf"
         try:
             with open(prf_filename, "w") as prf_file:
-                prf_file.write(output)
+                prf_file.write(proof_output)
             print(f"Proof written to {prf_filename}")
         except IOError as io_err:
             print(f"Error writing proof to {prf_filename}: {io_err}")

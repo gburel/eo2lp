@@ -435,5 +435,5 @@ let rec filter_vars (ctx : cc_context) (trm : cc_term) : param_set =
   let map_filter_vars (ctx : cc_context) (ts : cc_term list) =
     List.fold_left (fun vs t -> ParamSet.union (filter_vars ctx t) vs) ParamSet.empty ts
 
-  let map_filter_vars_list (ctx : cc_context) (trms : cc_term list) : param list =
+  let map_filter_vars_list (ctx : cc_context) (trms : cc_term list) : cc_context =
     ParamSet.to_list (map_filter_vars ctx trms)

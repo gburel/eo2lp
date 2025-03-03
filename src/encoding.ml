@@ -123,15 +123,19 @@ let cc_lp_binder (bb : cc_binder) =
   | Lambda -> Lambda
   | Let -> Let
 
-let cc_lp_iden (s : string) : string =
-  let forbidden = "\t\r\n :,;`(){}[]\".@$|?/" in
-  let is_valid_regular s =
-    if s = "/" then true
-    else if s = "" then false
-    else
-      String.for_all (fun c -> not (String.contains forbidden c)) s
-  in
-    if is_valid_regular s then s else (Printf.sprintf "{|%s|}" s)
+let cc_lp_iden (str_opt : string option) : string =
+  begin match str_opt with
+  | None -> "_"
+  | Some str ->
+    let forbidden = "_\t\r\n :,;`(){}[]\".@$|?/" in
+    let is_valid_regular s =
+      if s = "/" then true
+      else if s = "" then false
+      else
+        String.for_all (fun c -> not (String.contains forbidden c)) s
+    in
+      if is_valid_regular str then str else (Printf.sprintf "{|%s|}" str)
+  end
 
 let encode_univ univ =
   match univ with
@@ -160,8 +164,8 @@ let rec encode_type (bvs : lp_var list) (trm : cc_term) : lp_term =
   | Literal l -> Literal l
   | Implicit t -> Implicit (encode_type bvs t)
   | Univ u -> Univ (encode_univ u)
-  | Bind (Pi, (Some str,ty,att), body) ->
-    let v' = (cc_lp_iden str, encode_type bvs ty, att.implicit) in
+  | Bind (Pi, (x,ty,att), body) ->
+    let v' = (cc_lp_iden x, encode_type bvs ty, att.implicit) in
     Bind (Pi, v', encode_type (v'::bvs) body)
   | Bound i ->
     begin match List.nth_opt bvs i with
@@ -183,14 +187,20 @@ and encode_term (bvs : lp_var list) (trm : cc_term) : lp_term =
     | None -> mk_arrow (ty', encode_term bvs (shift 0 (-1) body))
     | Some str -> mk_dep_arrow (ty', Bind (Lambda, (str,ty',att.implicit), encode_term bvs body))
     end
-  | Bind (bb, (Some str,ty,att), body) ->
-    let v' = (cc_lp_iden str, encode_type bvs ty, att.implicit) in
+  | Bind (Let, (v,def,_), body) ->
+    let v' = (cc_lp_iden v, encode_term bvs def, false) in
+    Bind (
+      cc_lp_binder Let, v',
+      encode_term (v'::bvs) body
+    )
+  | Bind (bb, (x,ty,att), body) ->
+    let v' = (cc_lp_iden x, encode_type bvs ty, att.implicit) in
     Bind (
       cc_lp_binder bb, v',
       encode_term (v'::bvs) body
     )
   | Bound i -> Bound i
-  | Var x   -> Var (cc_lp_iden x)
+  | Var x   -> Var (cc_lp_iden (Some x))
   | App (t1,t2) -> App (encode_term bvs t1, encode_term bvs t2)
 
 let rec map_lp_term (f : string -> lp_term) = fun trm ->
@@ -221,7 +231,7 @@ let cc_lp (cmd : cc_command) =
   | Decl (str, ty_opt, def_opt, attr_opt) ->
       Symbol (
         decl_attr_lp attr_opt,
-        cc_lp_iden str,
+        cc_lp_iden (Some str),
         Option.map (encode_type []) ty_opt,
         Option.map (encode_term []) def_opt
       )

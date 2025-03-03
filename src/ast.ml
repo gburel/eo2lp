@@ -132,6 +132,11 @@ type eo_sig = eo_command list
 type eo_file = string * eo_sig
 type eo_library = eo_file list
 
+let is_symbol (trm : eo_term) =
+  match trm with
+  | Symbol _ -> true
+  | _ -> false
+
 let is_implicit (atts : attr list) =
   Option.is_some (List.assoc_opt "implicit" atts)
 
