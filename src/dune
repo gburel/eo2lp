@@ -8,8 +8,8 @@
 )
 
 (library
- (name eo2dk)
- (public_name eo2dk)
+ (name eo2lp)
+ (public_name eo2lp)
  (modules
    main parser lexer
    ast ast_cc inference prelude
