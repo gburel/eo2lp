@@ -1,0 +1,219 @@
+(declare-const _ (-> (! Type :var S :implicit) (! Type :var T :implicit) (-> S T) S T))
+
+(declare-type Bool ())
+(declare-const true Bool)
+(declare-const false Bool)
+(declare-const Proof (-> Bool Type))
+
+(declare-type eo::Int ())
+(declare-const eo::0 eo::Int)
+(declare-const eo::succ (-> eo::Int eo::Int))
+(declare-const eo::pred (-> eo::Int eo::Int))
+(define eo::1 () (eo::succ eo::0))
+(define eo::-1 () (eo::pred eo::0))
+
+(program If
+  ((t Type))
+  (Bool Type) Type
+  (
+    ((If true t) t)
+  )
+)
+
+(program eo::is_eq
+  ((S Type) (t S) (s S))
+  (S S) Bool
+  (
+    ((eo::is_eq t t) true)
+    ((eo::is_eq t s) false)
+  )
+)
+
+(program eo::ite
+  ((S Type) (t1 S) (t2 S))
+  (Bool S S) S
+  (
+    ((eo::ite true t1 t2) t1)
+    ((eo::ite false t1 t2) t2)
+  )
+)
+
+(program eo::requires
+  ((T Type) (S Type) (x T) (y S))
+  (T T S) S
+  (
+    ((eo::requires x x y) y)
+  )
+)
+
+; ----- Boolean operators -----
+(program eo::not
+  ()
+  (Bool) Bool
+  (
+    ((eo::not true) false)
+    ((eo::not false) true)
+  )
+)
+
+(program eo::and
+  ((x Bool))
+  (Bool Bool) Bool
+  (
+    ((eo::and true x) x)
+    ((eo::and false x) false)
+  )
+)
+
+(program eo::or
+  ((x Bool))
+  (Bool Bool) Bool
+  (
+    ((eo::or false x) x)
+    ((eo::or true x) true)
+  )
+)
+
+(program eo::xor
+  ((x Bool))
+  (Bool Bool) Bool
+  (
+    ((eo::xor true true) false)
+    ((eo::xor x false) x)
+    ((eo::xor false x) x)
+  )
+)
+
+; ----- Arithmetic operators -----
+
+(program eo::add
+  ((x eo::Int) (y eo::Int))
+  (eo::Int eo::Int) eo::Int
+  (
+    ((eo::add eo::0 x) x)
+    ((eo::add (eo::succ x) y) (eo::succ (eo::add x y)))
+    ((eo::add (eo::pred x) y) (eo::pred (eo::add x y)))
+  )
+)
+
+(program eo::neg
+  ((x eo::Int))
+  (eo::Int) eo::Int
+  (
+    ((eo::neg eo::0) eo::0)
+    ((eo::neg (eo::succ x)) (eo::pred (eo::neg x)))
+    ((eo::neg (eo::pred x)) (eo::succ (eo::neg x)))
+  )
+)
+
+(program eo::mul
+  ((x eo::Int) (y eo::Int))
+  (eo::Int eo::Int) eo::Int
+  (
+    ((eo::mul eo::0 y) eo::0)
+    ((eo::mul (eo::succ x) y) (eo::add y (eo::mul x y)))
+    ((eo::mul (eo::pred x) y) (eo::add (eo::neg y) (eo::mul x y)))
+  )
+)
+
+(program eo::is_neg_acc
+  ((x eo::Int) (acc eo::Int))
+  (eo::Int eo::Int) Bool
+  (
+    ((eo::is_neg_acc eo::0 eo::0) false)
+    ((eo::is_neg_acc eo::0 (eo::succ x)) false)
+    ((eo::is_neg_acc eo::0 (eo::pred x)) true)
+    ((eo::is_neg_acc (eo::succ x) acc) (eo::is_neg_acc x (eo::succ acc)))
+    ((eo::is_neg_acc (eo::pred x) acc) (eo::is_neg_acc x (eo::pred acc)))
+  )
+)
+
+(define eo::is_neg ((x eo::Int)) (eo::is_neg_acc x eo::0))
+
+(define eo::gt ((x eo::Int) (y eo::Int)) (eo::is_neg (eo::add (eo::neg x) y)))
+
+; ----- List operators -----
+(program-schema :right-assoc-nil eo::nil
+    ((T1 Type) (T2 Type) (#cons (-> T1 T2 T2)) (#nil T2))
+    ((-> T1 T2 T2)) T2
+    (
+        ((eo::nil #cons) #nil)
+    )
+)
+
+(program-schema :right-assoc-nil eo::cons
+    ((T1 Type) (T2 Type) (x T1) (y T1) (ys T2) (#cons (-> T1 T2 T2)) (#nil T2))
+    ((-> T1 T2 T2) T1 T2) T2
+    (
+        ((eo::cons #cons x #nil) (#cons x #nil))
+        ((eo::cons #cons x (#cons y ys)) (#cons x (#cons y ys)))
+    )
+)
+
+(program-schema :right-assoc-nil eo::is_list
+    ((T1 Type) (T2 Type) (x T1) (xs T2) (#cons (-> T1 T2 T2)) (#nil T2))
+    ((-> T1 T2 T2) T2) Bool
+    (
+        ((eo::is_list #cons #nil) true)
+        ((eo::is_list #cons (#cons x xs)) (eo::is_list #cons xs))
+    )
+)
+
+(program-schema :right-assoc-nil eo::list_len
+    ((T1 Type) (T2 Type) (x T1) (xs T2) (#cons (-> T1 T2 T2)) (#nil T2))
+    ((-> T1 T2 T2) T2) eo::Int
+    (
+        ((eo::list_len #cons #nil) eo::0)
+        ((eo::list_len #cons (#cons x xs)) (eo::succ (eo::list_len #cons xs)))
+    )
+)
+
+(program-schema :right-assoc-nil eo::list_concat
+    ((T1 Type) (T2 Type) (x T1) (xs T2) (y T1) (ys T2) (#cons (-> T1 T2 T2)) (#nil T2))
+    ((-> T1 T2 T2) T2 T2) T2
+    (
+        ((eo::list_concat #cons #nil #nil) #nil)
+        ((eo::list_concat #cons #nil (#cons y ys)) (#cons y ys))
+        ((eo::list_concat #cons (#cons x xs) #nil) (#cons x xs))
+        ((eo::list_concat #cons (#cons x xs) (#cons y ys)) (#cons x (eo::list_concat #cons xs (#cons y ys))))
+    )
+)
+
+(program-schema :right-assoc-nil eo::list_nth
+    ((T1 Type) (T2 Type) (x T1) (xs T2) (n eo::Int) (#cons (-> T1 T2 T2)) (#nil T2))
+    ((-> T1 T2 T2) T2 eo::Int) T1
+    (
+        ((eo::list_nth #cons (#cons x xs) eo::0) x)
+        ((eo::list_nth #cons (#cons x xs) (eo::succ n)) (eo::list_nth #cons xs n))
+    )
+)
+
+(program-schema :right-assoc-nil eo::list_elem
+    ((T1 Type) (T2 Type) (x T1) (xs T2) (y T1) (#cons (-> T1 T2 T2)) (#nil T2))
+    ((-> T1 T2 T2) T2 T1) Bool
+    (
+        ((eo::list_elem #cons #nil x) false)
+        ((eo::list_elem #cons (#cons x xs) x) true)
+        ((eo::list_elem #cons (#cons x xs) y) (eo::or false (eo::list_elem #cons xs y)))
+    )
+)
+
+(program-schema :right-assoc-nil eo::list_find_aux
+    ((T1 Type) (T2 Type) (x T1) (xs T2) (y T1) (i eo::Int) (#cons (-> T1 T2 T2)) (#nil T2))
+    ((-> T1 T2 T2) T2 T1 eo::Int) eo::Int
+    (
+        ((eo::list_find_aux #cons #nil x i) eo::-1)
+        ((eo::list_find_aux #cons (#cons x xs) x i) i)
+        ((eo::list_find_aux #cons (#cons x xs) y i) (eo::list_find_aux #cons xs y (eo::succ i)))
+    )
+)
+
+(define eo::list_find
+    (
+        (T1 Type :implicit) (T2 Type :implicit)
+        (cons (-> T1 T2 T2)) (xs T2) (x T1)
+    )
+    (
+        eo::list_find_aux cons xs x eo::0
+    )
+)

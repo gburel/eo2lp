@@ -1,0 +1,21 @@
+(ocamllex lexer)
+(menhir
+ (modules parser)
+)
+
+(env
+ (dev (flags (:standard -warn-error -A)))
+)
+
+(library
+ (name eo2dk)
+ (public_name eo2dk)
+ (modules
+   main parser lexer
+   ast ast_cc inference prelude
+   translation encoding
+  )
+ (flags :standard -w -8)
+ (libraries ppx_deriving str)
+ (preprocess (pps ppx_deriving.show))
+)

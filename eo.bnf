@@ -1,0 +1,62 @@
+;;;
+<eo-command> ::=
+    (assume <symbol> <term>) |
+    (assume-push <symbol> <term>) |
+    (declare-consts <lit-category> <type>) |
+    (declare-parameterized-const <symbol> (<typed-param>*) <type> <attr>*) |
+    (declare-oracle-fun <symbol> (<type>*) <type> <symbol>) |
+    (declare-rule <symbol> <keyword> <sexpr>*) |
+    (declare-rule <symbol> (<typed-param>*) <assumption>? <premises>? <arguments>? <reqs>? :conclusion <term> <attr>*) |
+    (declare-type <symbol> (<type>*)) |
+    (define <symbol> (<typed-param>*) <term>) |
+    (define-type <symbol> (<type>*) <type>) |
+    (include <string>) |
+    (program <symbol> <keyword> <sexpr>*) |
+    (program <symbol> (<typed-param>*) (<type>*) <type> ((<term> <term>)+)) |
+    (reference <string> <symbol>?) |
+    (step <symbol> <term>? :rule <symbol> <simple-premises>? <arguments>?) |
+    (step-pop <symbol> <term>? :rule <symbol> <simple-premises>? <arguments>?) |
+    <common-command>
+
+;;;
+<common-command> ::=
+    (declare-const <symbol> <type> <attr>*)
+    (declare-datatype <symbol> <datatype-dec>) |
+    (declare-datatypes (<sort-dec>^n) (<datatype-dec>^n)) |
+    (echo <string>?) |
+    (exit) |
+    (reset) |
+    (set-option <attr>)
+
+;;;
+<smtlib2-command> ::=
+    (assert <term>) |
+    (check-sat) |
+    (check-sat-assuming (<term>*)) |
+    (declare-fun <symbol> (<type>*) <type> <attr>*) |
+    (declare-sort <symbol> <numeral>) |
+    (define-const <symbol> <term>) |
+    (define-fun <symbol> (<typed-param>*) <type> <term>) |
+    (define-sort <symbol> (<symbol>*) <type>) |
+    (set-info <attr>) |
+    (set-logic <symbol>) |
+    <common-command>
+
+;;;
+<keyword>       ::= :<symbol>
+<attr>          ::= <keyword> <term>?
+<term>          ::= <symbol> | (<symbol> <term>+) | (! <term> <attr>+) | (eo::match (<typed-param>*) <term> ((<term> <term>)*))
+<type>          ::= <term>
+<typed-param>   ::= (<symbol> <type> <attr>*)
+<sort-dec>      ::= (<symbol> <numeral>)
+<sel-dec>       ::= (<symbol> <type>)
+<cons-dec>      ::= (<symbol> <sel-dec>*)
+<datatype-dec>  ::= (<cons-dec>+)
+<lit-category>  ::= '<numeral>' | '<decimal>' | '<rational>' | '<binary>' | '<hexadecimal>' | '<string>'
+
+;;;
+<assumption>      ::= :assumption <term>
+<premises>        ::= <simple-premises> | :premise-list <term> <term>
+<simple-premises> ::= :premises (<term>*)
+<arguments>       ::= :args (<term>*)
+<reqs>            ::= :requires ((<term> <term>)*)
