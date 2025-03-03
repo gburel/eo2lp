@@ -35,7 +35,7 @@ toplevel_eof:
 
 toplevel:
   | base_command { Base $1 }
-  | exc_command   { EO $1 }
+  | eunoia_command   { EO $1 }
   | control_command { Ctrl $1 }
   | proof_command   { Prf $1 }
 term:
@@ -113,7 +113,7 @@ var_decl:
 sort_decl:
   | LPAREN; SYMBOL; NUMERAL; RPAREN { ($2, $3) }
 
-exc_command:
+eunoia_command:
   | LPAREN; DEFINE; SYMBOL; LPAREN; list(eo_var); RPAREN; term; RPAREN
     { Define ($3, $5, $7) }
   | LPAREN; DECLARE_CONSTS; lit_category; term; RPAREN

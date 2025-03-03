@@ -376,8 +376,37 @@ let exc_cmd_cc (cmd : exc_command) =
 
       | None -> [prog_decl; Rule (ctx, rs') ]
     end
-
   | Reference _ -> failwith "undefined"
+
+
+
+let proof_cmd_cc (cmd : proof_command) : cc_command list =
+  match cmd with
+  | Assume (str, trm) ->
+    let trm' = eo_cc_term [] [] trm in
+    let typ = appvar "Proof" [trm'] in
+    [ Decl (str, Some typ, None, None) ]
+
+  | Step (str, trm_opt, rule, prem_opt, arg_opt) ->
+    (* make type of proof term *)
+    let trm' = eo_cc_term [] [] (Option.get trm_opt) in
+    let typ = appvar "Proof" [trm'] in
+    (* now make definition/body *)
+    let prems = match prem_opt with
+      | Some (Premises ts) -> List.map (eo_cc_term [] []) ts
+      | _ -> []
+    in
+    let args = match arg_opt with
+      | Some ts -> List.map (eo_cc_term [] []) ts
+      | None -> []
+    in
+    let def = appvar rule (args @ prems) in
+
+    [ Decl (str, Some typ, Some def, None) ]
+
+  | AssumePush (str, trm) -> failwith "undefined"
+  | StepPop (str, trm_opt, rule, prem_opt, ts_opt) -> failwith "undefined"
+
 
 let eo_cc (cmd : eo_command) =
   let () = match get_eo_name cmd with

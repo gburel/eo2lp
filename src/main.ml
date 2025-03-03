@@ -62,7 +62,7 @@ let lp_imports =
   [
     "require open Logic.U.Set Logic.U.Prop;";
     "require open Logic.U.Arrow Logic.U.DepArrow;";
-    "require open eo2dk.Prelude;";
+    "require open eo2lp.Prelude;";
     ""
   ]
 

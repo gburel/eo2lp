@@ -3,7 +3,7 @@ import glob
 import subprocess
 import re
 from collections import Counter
-import os
+# import os
 
 def main():
     # Recursively find all .smt2 files in the current directory.
@@ -21,6 +21,7 @@ def main():
             result = subprocess.run(
                 ["cvc5",
                     "--dump-proofs",
+                    "--proof-format-mode=cpc",
                     "--proof-granularity=dsl-rewrite",
                     "--proof-print-conclusion",
                     "--dag-thresh=0",

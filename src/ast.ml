@@ -39,7 +39,7 @@ and selector_decl  = string * eo_term
 and constructor_decl = string * selector_decl list
 [@@deriving show]
 
-type exc_command =
+type eunoia_command =
 | Define of string * eo_var list * eo_term
 | DeclareRule of string * eo_var list * rule_spec
 | DeclareConsts of lit_category * eo_term
@@ -96,7 +96,7 @@ type control_command =
 type eo_command =
   | Base of base_command
   | Ctrl of control_command
-  | EO of exc_command
+  | EO of eunoia_command
   | Prf of proof_command
 [@@deriving show]
 
