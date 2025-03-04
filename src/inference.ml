@@ -35,7 +35,7 @@ let elaborate_var imp sigg ctx x =
   | Some ty -> elab x ty
   | None ->
     begin match lookup_cmd_opt sigg x with
-    | Some (Decl (_, Some ty, _, _)) -> elab x ty
+    | Some (Const (_, Some ty, _, _)) -> elab x ty
     | None -> failwith ("Free variable found during elaboration: " ^ x)
     end
   end
@@ -106,7 +106,7 @@ let rec infer_type
       (ty, EqSet.empty)
     | None ->
       begin match lookup_cmd_opt sigg x with
-      | Some (Decl (_, Some ty, _, _)) ->
+      | Some (Const (_, Some ty, _, _)) ->
         if !debug_inference then
           Printf.printf "⊢ %s : %s\n"
           (string_of_term t) (string_of_term ty);

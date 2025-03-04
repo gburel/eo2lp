@@ -25,8 +25,7 @@ and param_attr = { implicit : bool; list : bool }
 (* each item in a context represents a mapping between a set of strings and a term. *)
 type cc_context = param list
 
-type decl_attr =
-  | Sequential
+type app_attr =
   | RightAssoc
   | LeftAssoc
   | RightAssocNil of cc_term
@@ -37,7 +36,9 @@ type decl_attr =
 
 type cc_rule = (cc_term * cc_term) list
 type cc_command =
-  | Decl of string * cc_term option * cc_term option * decl_attr option
+  | Const of string * cc_term * app_attr option
+  | Defn of string * cc_term
+  | Prog of string * cc_term
   | Rule of param list * cc_rule
 
 type cc_signature = {
@@ -118,7 +119,6 @@ let string_of_rules rs =
 
 let string_of_attribute att =
   match att with
-  | Sequential -> ":sequential"
   | RightAssoc -> ":right-assoc"
   | LeftAssoc -> ":left-assoc"
   | RightAssocNil trm -> ":right-assoc-nil " ^ string_of_term trm
@@ -132,22 +132,20 @@ let string_of_context ps =
 
 let string_of_cmd cmd =
   match cmd with
-  | Decl (str, ty_opt, def_opt, att_opt) ->
-    let ty_str = match ty_opt with
-      | Some ty -> Printf.sprintf " : %s" (string_of_term ty)
-      | None -> ""
-    in
-    let def_str = match def_opt with
-      | Some def -> Printf.sprintf " := %s" (string_of_term def)
-      | None -> ""
-    in
+  | Const (str, ty, att_opt) ->
+    let ty_str = Printf.sprintf " : %s" (string_of_term ty) in
     let att_str = match att_opt with
       | Some att -> Printf.sprintf "\n  with %s" (string_of_attribute att)
-      | None -> ""
+      | None  -> ""
     in
-    Printf.sprintf "symbol %s%s%s%s"
-      str ty_str def_str att_str
-
+      Printf.sprintf "const %s%s%s"
+        str ty_str att_str
+  | Defn (str, def) ->
+      Printf.sprintf "def %s := %s"
+        str (string_of_term def)
+  | Prog (str, ty) ->
+      Printf.sprintf "prog %s : %s"
+        str (string_of_term ty)
   | Rule (ps, rs) ->
     Printf.sprintf "rule %s\n%s"
       (string_of_context ps) (string_of_rules rs)
@@ -171,6 +169,9 @@ let param_var ((x_opt,_,_) : param) =
   | Some x -> Var x
   | None -> failwith "Cannot create variable from nameless parameter."
 
+let mk_param (x : string) (ty : cc_term) : param =
+  (Some x, ty, {implicit=false; list=false})
+
 let is_binder bb trm = match trm with
   | Bind (bb', _, _) -> bb = bb'
   | _ -> false
@@ -192,43 +193,42 @@ let lookup_typ ctx x =
 (* Maybe get command in signature `sg` with name `str`. *)
 let lookup_cmd_opt (sigg : cc_signature) (str : string) : cc_command option =
   let cstr cmd = match cmd with
-    | Decl (str, _, _, _) -> Some str
+    | Const (str, _, _, _) -> Some str
     | _ -> None
   in
     List.find_opt (fun cmd -> cstr cmd = Some str) (sigg.cmds)
 
 (* Maybe get attribute of command with name `str` in signature `sg`. *)
-let lookup_decl_attr_opt (sigg : cc_signature) (str : string) =
+let lookup_decl_attr (sigg : cc_signature) (str : string) =
   match lookup_cmd_opt sigg str with
-  | Some (Decl (_, _, _, att_opt)) -> att_opt
+  | Some (Const (_, _, _, att_opt)) -> att_opt
   | _ -> None
-
+(* given a list of commands and a string, return all the commands that
+  use the attribute corresponding to that string. *)
 let sig_filter_attr (sg : cc_command list) (str : string) =
-  List.filter_map (fun cmd -> match cmd with
-    | Decl (_,_,_, Some (RightAssocNil _))
-        when str = "right-assoc-nil" -> Some cmd
-    | Decl (_,_,_, Some (LeftAssocNil _))
-        when str = "left-assoc-nil" -> Some cmd
-    | Decl (_,_,_, Some RightAssoc)
-        when str = "right-assoc" -> Some cmd
-    | Decl (_,_,_, Some LeftAssoc)
-        when str = "left-assoc" -> Some cmd
-    | Decl (_,_,_, Some Sequential)
-        when str = "sequential" -> Some cmd
-    | Decl (_,_,_, Some (Chainable _))
-        when str = "chainable" -> Some cmd
-    | Decl (_,_,_, Some (Pairwise _))
-        when str = "pairwise" -> Some cmd
-    | Decl (_,_,_, Some (Binder _))
-        when str = "binder" -> Some cmd
-    | _ -> None
-  ) sg
+  let has_attr att str =
+    match (att,str) with
+    | (RightAssocNil _, "right-assoc-nil") -> true
+    | (LeftAssocNil _, "left-assoc-nil") -> true
+    | (RightAssoc, "right-assoc") -> true
+    | (LeftAssoc, "left-assoc") -> true
+    | (Chainable _, "chainable") -> true
+    | (Pairwise _, "pairwise") -> true
+    | (Binder _, "binder") -> true
+    | _ -> false
+  in
+    List.filter (function
+      | Const (_,_,_, Some att) -> has_attr att str
+      | _ -> false
+    ) sg
 
 let sig_context cs =
-  List.filter_map (fun cmd -> match cmd with
-    | Decl (str, Some typ,_,_) -> Some (str,typ,{implicit=false; list=false})
-    | _ -> None
-  ) cs
+  List.filter_map (fun cmd ->
+    match cmd with
+      | Const (str, Some typ,_,_) ->
+          Some (str,typ,{implicit=false; list=false})
+      | _ -> None
+    ) cs
 
 let app : cc_term -> cc_term list -> cc_term =
   List.fold_left (fun acc y -> App (acc, y))
@@ -277,7 +277,7 @@ let mk_pairwise (f : cc_term) (agg : cc_term) (args : cc_term list) : cc_term =
 
    let rec mk_app ctx f args att_opt =
      match att_opt with
-     | None | Some (Binder _) | Some Sequential ->
+     | None | Some (Binder _) ->
          List.fold_left (fun e arg -> App (e, arg)) f args
      | Some RightAssoc ->
          (match args with
@@ -429,11 +429,25 @@ let rec filter_vars (ctx : cc_context) (trm : cc_term) : param_set =
       let fbody = filter_vars ctx body in
       ParamSet.union ftyp fbody
 
-  let filter_vars_list (ctx : cc_context) (trm : cc_term) : param list =
-    ParamSet.to_list (filter_vars ctx trm)
+let filter_vars_list (ctx : cc_context) (trm : cc_term) : param list =
+  ParamSet.to_list (filter_vars ctx trm)
 
-  let map_filter_vars (ctx : cc_context) (ts : cc_term list) =
-    List.fold_left (fun vs t -> ParamSet.union (filter_vars ctx t) vs) ParamSet.empty ts
+let map_filter_vars (ctx : cc_context) (ts : cc_term list) =
+  List.fold_left (fun vs t -> ParamSet.union (filter_vars ctx t) vs) ParamSet.empty ts
 
-  let map_filter_vars_list (ctx : cc_context) (trms : cc_term list) : cc_context =
-    ParamSet.to_list (map_filter_vars ctx trms)
+let map_filter_vars_list (ctx : cc_context) (trms : cc_term list) : cc_context =
+  ParamSet.to_list (map_filter_vars ctx trms)
+
+let rec close_term (ctx : cc_context) (trm : cc_term) : cc_term =
+  (* create implicit parameters for all free variables in trm *)
+  let trm_fvars = filter_vars_list ctx trm in
+  begin if trm_fvars = [] then
+    trm
+  else
+    let fvar_params =
+      List.map (fun (x,ty,atts) ->
+        (x, ty, {atts with implicit=true})
+      ) trm_fvars
+    in
+      close_term ctx (mk_pi fvar_params trm)
+  end

@@ -19,6 +19,7 @@ and lp_var = string * lp_term * bool
 
 type lp_attr =
   | Sequential
+  | Injective
 
 type lp_cmd =
   | Symbol of lp_attr option * string * lp_term option * lp_term option
@@ -221,25 +222,26 @@ let mk_ptrn_vars (vs : string list) =
   let f = (fun x -> if List.mem x vs then Ptrn x else Var x)
   in map_lp_term f
 
-let decl_attr_lp (attr_opt : decl_attr option) =
-  match attr_opt with
-  | Some Sequential -> Some Sequential
-  | _ -> None
-
 let cc_lp (cmd : cc_command) =
   match cmd with
-  | Decl (str, ty_opt, def_opt, attr_opt) ->
+  | Const (str, ty_opt, def_opt, _) ->
       Symbol (
-        decl_attr_lp attr_opt,
+        Some Injective,
         cc_lp_iden (Some str),
         Option.map (encode_type []) ty_opt,
         Option.map (encode_term []) def_opt
       )
-  | Rule (ps, rs) ->
+  | Prog (str,ty) ->
+      Symbol (
+        Some Sequential,
+        cc_lp_iden (Some str),
+        Some (encode_type [] ty),
+        None
+      )
+  | Rule (params, rs) ->
     let enc t = mk_ptrn_vars
-      (List.map (fun (Some x,_,_) -> x) ps) (encode_term [] t) in
-    let encode_rule =
-      (fun (lhs,rhs) -> (enc lhs, enc rhs)) in
+      (List.map (fun (Some x,_,_) -> x) params) (encode_term [] t) in
+    let encode_rule = (fun (lhs,rhs) -> (enc lhs, enc rhs)) in
     Rule (List.map encode_rule rs)
 
 let cc_lp_debug cmd =
