@@ -21,14 +21,14 @@ let tdata_init =
     in
       [
         Prog ("eo::typeof", typ);
-        Const ("Bool", Some (Univ TYPE), None, None);
-        Const ("Proof", Some (mk_pi_nameless [Var "Bool"] (Univ TYPE)), None, None);
+        Const ("Bool", Univ TYPE, None);
+        Const ("Proof", mk_pi_nameless [Var "Bool"] (Univ TYPE), None);
       ]
   in
   {
     asserts = 0;
     rschema = [];
-    signature = { cmds = init; ltyps = [] };
+    signature = init;
   }
 
 let tdata_ref = ref tdata_init
@@ -156,8 +156,7 @@ and eo_match_cc ctx bvs ps trm rs =
     (* Add program declarations to signature in global ref. *)
     Printf.printf "%s\n" (string_of_sig prog_sig);
     tdata_ref := { !tdata_ref with
-      signature = { !tdata_ref.signature with
-        cmds = prog_sig @ !tdata_ref.signature.cmds }
+      signature = prog_sig @ !tdata_ref.signature
     };
 
     (* Make correct indices for bound variables within match rules to be exported. *)
@@ -205,7 +204,7 @@ let base_cmd_cc (cmd : base_command) : cc_command list =
     tdata_ref := { !tdata_ref with asserts = !tdata_ref.asserts + 1 };
     let typ = appvar "Proof" [eo_cc_term [] [] trm] in
 
-    [ Const (aname, Some typ, None, None) ]
+    [ Const (aname, typ, None) ]
 
   | DeclareConst (str, typ, atts) ->
     let
@@ -217,9 +216,10 @@ let base_cmd_cc (cmd : base_command) : cc_command list =
         | _ -> failwith "More than one declaration attribute."
     in
 
-    let rules =
+    let assoc_rules =
       match att_opt with
       | Some (RightAssocNil nil) ->
+        (* Gather all program-schema with right-assoc-nil attribute. *)
         let schema_cs = List.filter_map (fun (str, rs) ->
             if str = "right-assoc-nil" then Some rs else None
           ) !tdata_ref.rschema
@@ -227,23 +227,24 @@ let base_cmd_cc (cmd : base_command) : cc_command list =
           List.map (fun (ctx, rs) ->
             mvar_count := 0;
             let (cons, mvar_ctx) =
-              elaborate_var true (!tdata_ref.signature)
-                [(Some str, typ', {implicit = false; list = false})] str
+              elaborate_var (!tdata_ref.signature)
+              [mk_param str typ'] str true
             in
               Rule (ctx @ mvar_ctx,
                 inst_schema rs [("#cons", cons); ("#nil", nil)])
           ) schema_cs
-      | _ -> [] in
-    [ Const (str, Some typ', None, att_opt) ] @ rules
+      | _ -> []
+    in
+      [ Const (str, typ', att_opt) ] @ assoc_rules
 
   | DefineConst (str, trm) ->
     (* TODO. infer type here *)
     let trm' = eo_cc_term [] [] trm in
-    [ Const (str, None, Some trm', None) ]
+    [ Const (str, trm', None) ]
 
   | DeclareType (str, tys) ->
     let typ' = eo_arrow_cc [] [] (tys @ [Symbol "Type"]) in
-    [ Const (str, Some typ', None, None) ]
+    [ Const (str, typ', None) ]
 
   | DefineType _ -> failwith "DefineType"
   | DeclareFun _ -> failwith "DeclareFun"
@@ -257,6 +258,7 @@ let base_cmd_cc (cmd : base_command) : cc_command list =
 
 let eunoia_cmd_cc (cmd : eunoia_command) =
   match cmd with
+  (* TODO. check for :type attribute. *)
   | Define (str, vs, trm) ->
     let rec eo_lambda_cc ctx bvs (vs : eo_var list) body =
       match vs with
@@ -266,9 +268,8 @@ let eunoia_cmd_cc (cmd : eunoia_command) =
         Bind (Lambda, v', eo_lambda_cc ctx (v'::bvs) vs' body)
     in
     let trm' = eo_lambda_cc [] [] vs trm in
-    let typ = infer (!tdata_ref.signature) [] [] trm' in
-
-    [ Prog (str, Some typ, Some trm', None) ]
+    (* infer type here *)
+    [ Defn (str, infer (!tdata_ref.signature) [] [] trm', trm') ]
 
   | DeclareRule (str, ps, rspec) ->
     let ctx = List.map (eo_var_cc [] []) ps in
@@ -292,107 +293,98 @@ let eunoia_cmd_cc (cmd : eunoia_command) =
       end
     in
 
+    (* TODO. do something meaningful on PremiseList *)
+    let prem_ptrns =
+      begin match rspec.prems with
+      | Some (Premises ts) -> List.map (eo_cc_term ctx []) ts
+      | Some (PremiseList (trm,_)) -> [ eo_cc_term ctx [] trm ]
+      | None -> [ ]
+      end
+    in
+    let prop_ptrns = prem_ptrns @ [eo_cc_term ctx [] rspec.conclusion] in
     let arg_ptrns = Option.fold
       ~none:[] ~some:(List.map (eo_cc_term ctx []))
       rspec.arguments
     in
 
-    (* Case 1. Either no arg-patterns or arg-patterns are all variables. *)
-    if List.for_all (fun trm -> is_var trm) arg_ptrns then
-      (* create params for each arg. *)
-      let arg_params =
-        List.map (fun (Var str) ->
-          mk_param str (lookup_typ ctx str)
-        ) arg_ptrns
-      in
-      let rule_typ_raw = mk_pi arg_params rule_typ_body in
-      let rule_typ = close_term ctx rule_typ_raw in
-
-      [ Decl (str, Some rule_typ, None, None) ]
-    (* Case 2. Non-trivial argument patterns. Create an auxillary function. *)
-    else
     (* step 1. create type signature and rewrite rule for auxillary.*)
-      (* calculate type of each pattern under current signature and context.*)
-      let ptrn_tys = List.map
-        (infer (!tdata_ref.signature) ctx []) arg_ptrns in
+    (* calculate type of each pattern under current signature and context.*)
+    let prop_tys = List.map
+      (fun _ -> Var "Bool") prop_ptrns in
+    let arg_tys = List.map
+      (infer (!tdata_ref.signature) ctx []) arg_ptrns in
 
-      let aux_str = str ^ "_aux" in
-      let aux_typ_body = mk_pi_nameless ptrn_tys (Univ TYPE) in
-      let aux_typ = close_term ctx aux_typ_body in
-      (* elaborate lhs/rhs with explicits where needed.*)
-      let ctx' = (mk_param aux_str aux_typ) :: ctx in
-      let rw_rules = map_cc_rule
-        (infer_term (!tdata_ref.signature) ctx')
-        [(appvar aux_str arg_ptrns, rule_typ_body)]
-      in
-      let aux_decl = [
-        Decl (aux_str, Some aux_typ, None, None);
-        Rule (ctx, rw_rules)
-      ] in
+    let aux_str = str ^ "_aux" in
+    let aux_typ_body = mk_pi_nameless (prop_tys @ arg_tys) (Univ TYPE) in
+    let aux_typ = close_term ctx aux_typ_body in
+
+    (* elaborate lhs/rhs with explicits where needed.*)
+    let ctx' = (mk_param aux_str aux_typ) :: ctx in
+    let rw_rules = map_cc_rule
+      (infer_term (!tdata_ref.signature) ctx')
+      [(appvar aux_str (prop_ptrns @ arg_ptrns), rule_typ_body)]
+    in
+    let aux_decl = [ Prog (aux_str, aux_typ); Rule (ctx, rw_rules) ] in
     (* step 2. create signature for main inference rule. *)
       (* create parameters for each arg-pattern *)
-      let arg_params = List.mapi (fun i ty ->
-        mk_param ("r" ^ string_of_int i) ty)
-        ptrn_tys
-      in
-      (* eta-expand auxillary function.*)
-      let aux_vars = List.map param_var arg_params in
-      let aux_app =  appvar aux_str aux_vars in
-      let rule_typ_raw = mk_pi arg_params aux_app in
-      let rule_typ = close_term ctx rule_typ_raw in
+    let prop_params = List.mapi (fun i ty ->
+      mk_param ("p" ^ string_of_int i) ty)
+      prop_tys
+    and arg_params = List.mapi (fun i ty ->
+      mk_param ("x" ^ string_of_int i) ty)
+      arg_tys
+    in
 
-      aux_decl @ [ Decl (str, Some rule_typ, None, None) ]
+    (* eta-expand auxillary function.*)
+    let aux_vars = List.map param_var (prop_params @ arg_params) in
+    let aux_app =  appvar aux_str aux_vars in
+    let rule_typ_raw = mk_pi (prop_params @ arg_params) aux_app in
+    let rule_typ = close_term ctx rule_typ_raw in
 
-  | DeclareConsts (lit_cat, eo_typ) ->
-    let typ = eo_cc_term [] [] eo_typ in
-    tdata_ref := { !tdata_ref with signature =
-      { !tdata_ref.signature with ltyps =
-          (lit_cat, typ) :: !tdata_ref.signature.ltyps
-      }
-    }; []
+    aux_decl @ [ Const (str, rule_typ, None) ]
+
+  | DeclareConsts (lcat, eo_typ) ->
+    [ LitTy (lcat, eo_cc_term [] [] eo_typ)]
 
   | DeclareParamConst _ -> failwith "undefined"
   | DeclareOracleFun _ -> failwith "undefined"
   | Include _ -> []
   | Program (str, att_str_opt, eo_ps, dom_tys, ran_ty, eo_rs) ->
-    let ctx = List.map (eo_var_cc [] []) eo_ps in
-    let ty_raw = eo_arrow_cc ctx [] (dom_tys @ [ran_ty]) in
+    let params = List.map (eo_var_cc [] []) eo_ps in
+    let ty_raw = eo_arrow_cc params [] (dom_tys @ [ran_ty]) in
     let ty_binds = List.map (fun (x,ty,p) ->
       (x, ty, {implicit = true; list = p.list}))
-      (filter_vars_list ctx ty_raw) in
+      (filter_vars_list params ty_raw) in
 
     let ty = mk_pi ty_binds ty_raw in
-    let prog_decl = Decl (str, Some ty, None, Some Sequential) in
-
-    let rs = List.map (eo_cc_rule ctx []) eo_rs in
-    let sig' = { !tdata_ref.signature
-      with cmds = prog_decl :: !tdata_ref.signature.cmds } in
-    let rs' = map_cc_rule (infer_term sig' ctx) rs in
+    let rs = List.map (eo_cc_rule params []) eo_rs in
+    let ctx' = (mk_param str ty) :: params in
+    let rs' = map_cc_rule (infer_term !tdata_ref.signature ctx') rs in
 
     begin match att_str_opt with
-      | Some str ->
-        tdata_ref := { !tdata_ref with
-          rschema = (str, (ctx, rs)) :: !tdata_ref.rschema
-        };
+    | Some att_str ->
+      tdata_ref := { !tdata_ref with
+        rschema = (att_str, (params, rs)) :: !tdata_ref.rschema
+      };
 
-        let att_cmds = sig_filter_attr (!tdata_ref.signature.cmds) str in
-        let rule_insts = List.filter_map (fun cmd ->
-          begin match cmd with
-            | Decl (str, Some typ, _, Some (RightAssocNil nil)) ->
-              mvar_count := 0;
-              let (cons,mvar_ctx) = elaborate_var true
-                (!tdata_ref.signature)
-                [(Some str, typ, {implicit=false; list=false})] str in
-              let sub = [("#cons", cons); ("#nil", nil)] in
-              Some (Rule (ctx @ mvar_ctx, inst_schema rs sub))
-            | _ -> None
-          end
-        ) att_cmds
+      let assocs = sig_assocs !tdata_ref.signature Right in
+      let rule_insts = List.map (fun (Var cons_str, nil) ->
+        mvar_count := 0;
+        let (cons, mvar_ctx) =
+          elaborate_var (!tdata_ref.signature)
+          [mk_param cons_str ty] cons_str true
         in
-          [ prog_decl ] @ rule_insts
+          Rule (
+            params @ mvar_ctx,
+            inst_schema rs [("#cons", cons); ("#nil", nil)]
+          )
+      ) assocs
+      in
+        Prog (str,ty) :: rule_insts
 
-      | None -> [prog_decl; Rule (ctx, rs') ]
+    | None -> [ Prog (str,ty); Rule (params, rs') ]
     end
+
   | Reference _ -> failwith "undefined"
 
 let proof_cmd_cc (cmd : proof_command) : cc_command list =
@@ -400,7 +392,7 @@ let proof_cmd_cc (cmd : proof_command) : cc_command list =
   | Assume (str, trm) ->
     let trm' = eo_cc_term [] [] trm in
     let typ = appvar "Proof" [trm'] in
-    [ Decl (str, Some typ, None, None) ]
+    [ Const (str, typ, None) ]
 
   | Step (str, trm_opt, rule, prem_opt, arg_opt) ->
     (* make type of proof term *)
@@ -416,12 +408,11 @@ let proof_cmd_cc (cmd : proof_command) : cc_command list =
       | None -> []
     in
     let def = appvar rule (args @ prems) in
+    (* let def' = infer_term !tdata_ref.signature [] def in *)
+    [ Defn (str, typ, def) ]
 
-    [ Decl (str, Some typ, Some def, None) ]
-
-  | AssumePush (str, trm) -> failwith "undefined"
-  | StepPop (str, trm_opt, rule, prem_opt, ts_opt) -> failwith "undefined"
-
+  | AssumePush _ -> failwith "undefined"
+  | StepPop _ -> failwith "undefined"
 
 let eo_cc (cmd : eo_command) =
   let () = match get_eo_name cmd with
@@ -430,5 +421,5 @@ let eo_cc (cmd : eo_command) =
   match cmd with
   | Base cmd -> base_cmd_cc cmd
   | EO cmd -> eunoia_cmd_cc cmd
-  | Ctrl _ -> []
   | Prf cmd -> proof_cmd_cc cmd
+  | Ctrl _ -> []

@@ -18,8 +18,9 @@ type lp_term =
 and lp_var = string * lp_term * bool
 
 type lp_attr =
-  | Sequential
   | Injective
+  | Constant
+  | Sequential
 
 type lp_cmd =
   | Symbol of lp_attr option * string * lp_term option * lp_term option
@@ -41,6 +42,8 @@ let string_of_lp_binder bb =
 let string_of_lp_attr att =
   match att with
   | Sequential -> "sequential"
+  | Injective -> "injective"
+  | Constant -> "constant"
 
 let rec string_of_lp_term bvs trm =
   match trm with
@@ -145,12 +148,11 @@ let encode_univ univ =
 
 let rec shift (i : int) (j : int) (trm : cc_term) : cc_term =
   match trm with
-  | Univ _ -> trm
-  | Var _  -> trm
-  | Meta _ -> trm
+  | (Univ _|Var _|Meta _|Literal _) -> trm
+  | Implicit t -> Implicit (shift i j t)
   | Bound k -> if k > i then Bound (k + j) else Bound k
   | App(t1, t2) -> App(shift i j t1, shift i j t2)
-| Bind(bb, (x,ty,att), body) ->
+  | Bind(bb, (x,ty,att), body) ->
     let ty' = shift i j ty in
     let body' = shift (i+1) j body in
     Bind(bb, (x,ty',att), body')
@@ -175,6 +177,7 @@ let rec encode_type (bvs : lp_var list) (trm : cc_term) : lp_term =
     | None -> failwith "Bound variable not found in list."
     end
   | _ -> El (encode_term bvs trm)
+
 (* (encode_term e) : t, t ∈ { El (..), Prf (..) } *)
 and encode_term (bvs : lp_var list) (trm : cc_term) : lp_term =
   match trm with
@@ -224,13 +227,21 @@ let mk_ptrn_vars (vs : string list) =
 
 let cc_lp (cmd : cc_command) =
   match cmd with
-  | Const (str, ty_opt, def_opt, _) ->
+  | Const (str, ty, _) ->
       Symbol (
-        Some Injective,
+        Some Constant,
         cc_lp_iden (Some str),
-        Option.map (encode_type []) ty_opt,
-        Option.map (encode_term []) def_opt
+        Some (encode_type [] ty),
+        None
       )
+  | Defn (str, ty, trm) ->
+      Symbol (
+        None,
+        cc_lp_iden (Some str),
+        Some (encode_type [] ty),
+        Some (encode_term [] trm)
+      )
+  | LitTy _ -> Symbol (None, "dummy", Some (Univ Set), None)
   | Prog (str,ty) ->
       Symbol (
         Some Sequential,

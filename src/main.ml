@@ -77,10 +77,11 @@ let proc_eo_cmd (ch : out_channel) (cmd : eo_command) =
     let cs = eo_cc cmd in
     if cs <> [] then
       List.iter (fun cmd ->
-        Printf.printf "Encoding command...\n%s\n" (string_of_cmd cmd);
-        tdata_ref := { !tdata_ref with signature =
-          { !tdata_ref.signature with cmds = cmd :: !tdata_ref.signature.cmds }
+        tdata_ref := { !tdata_ref with
+          signature = cmd :: !tdata_ref.signature
         };
+
+        Printf.printf "Encoding command...\n%s\n" (string_of_cmd cmd);
         let lp_cmd = cc_lp cmd in
         Printf.printf "Done!\n%s\n\n" (string_of_lp_cmd lp_cmd);
         write_lp_cmd ch lp_cmd;

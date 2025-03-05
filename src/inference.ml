@@ -23,40 +23,36 @@ let rec mk_mvars (trm : cc_term) : param list =
   `t1 .. tn`, and replacing `x` with `x ?a1 .. ?an. We also return the list of
   all of the metavariables generated paired with their types.
   *)
-let elaborate_var imp sigg ctx x =
-  let elab y ty =
-    if is_binder Pi ty then
-      let ys = mk_mvars ty in
-      let mvs = List.map (fun (Some str, _, _) ->
-        if imp then Implicit (Meta str) else Meta str) ys in
-      (appvar y mvs, ys)
-    else (Var x, [])
-  in begin match lookup_typ_opt ctx x with
-  | Some ty -> elab x ty
-  | None ->
-    begin match lookup_cmd_opt sigg x with
-    | Some (Const (_, Some ty, _, _)) -> elab x ty
-    | None -> failwith ("Free variable found during elaboration: " ^ x)
-    end
-  end
+(* TODO. only add implicit 'holes' at the very end when subsituting metavariables.*)
+let add_metavars x ty imp =
+  if is_binder Pi ty then
+    let ys = mk_mvars ty in
+    let mvs = List.map (fun (Some str, _, _) ->
+      if imp then
+        Implicit (Meta str)
+      else
+        Meta str
+    ) ys in (appvar x mvs, ys)
+  else (Var x, [])
 
-let rec elaborate_term imp sigg ctx (bvs : cc_context) trm =
+let elaborate_var sigg ctx str imp =
+  add_metavars str (lookup_typ_global sigg ctx str) imp
+
+let rec elaborate_term
+  (cmds : cc_command list) (ctx : cc_context) (bvs : cc_context)
+  (trm : cc_term) (imp : bool) : (cc_term * cc_context) =
   match trm with
   | (Univ _|Meta _|Literal _) -> (trm, [])
-  | Bound i ->
-    begin match List.nth_opt bvs i with
-    | Some (Some x,_,_) -> (Var x, [])
-    | _ -> failwith "Free (bound) variable found during elaboration."
-    end
-  | Var x -> elaborate_var imp sigg ctx x
+  | Bound i -> (lookup_bvar ctx i, [])
+  | Var str -> elaborate_var cmds ctx str imp
   | App (e1,e2) ->
-    let (e1', c1) = elaborate_term imp sigg ctx bvs e1 in
-    let (e2', c2) = elaborate_term imp sigg ctx bvs e2 in
+    let (e1', c1) = elaborate_term cmds ctx bvs e1 imp in
+    let (e2', c2) = elaborate_term cmds ctx bvs e2 imp in
     (App (e1',e2'), c1 @ c2)
   | Bind (bb, (x, ty, att), trm') ->
-    let (ty', c1) = elaborate_term imp sigg ctx bvs ty in
+    let (ty', c1) = elaborate_term cmds ctx bvs ty imp in
     let ctx' = (x, ty', att) :: ctx in
-    let (trm'', c2) = elaborate_term imp sigg ctx' ((x,ty',att)::bvs) trm' in
+    let (trm'', c2) = elaborate_term cmds ctx' ((x,ty',att)::bvs) trm' imp in
     (Bind (bb, (x, ty', att), trm''), c1 @ c2)
 
 (* TODO. reimplement using sets rather than lists to avoid constraint duplication*)
@@ -90,30 +86,20 @@ let rec infer_type
   | Univ TYPE -> (Univ KIND, EqSet.empty)
   | Literal l ->
     begin match l with
-    | Numeral _ ->  (List.assoc NUM sigg.ltyps, EqSet.empty)
-    | Rational _ -> (List.assoc RAT sigg.ltyps, EqSet.empty)
-    | Decimal _ ->  (List.assoc DEC sigg.ltyps, EqSet.empty)
+    | Numeral _ ->  (Option.get (lookup_lit sigg NUM), EqSet.empty)
+    | Rational _ -> (Option.get (lookup_lit sigg RAT), EqSet.empty)
+    | Decimal _ ->  (Option.get (lookup_lit sigg DEC), EqSet.empty)
     end
+
   | Implicit t -> infer_type sigg ctx t
   | Bound _ -> failwith "Encountered bound variable during type inference!"
 
   | (Var x|Meta x) ->
-    begin match lookup_typ_opt ctx x with
-    | Some ty ->
-      if !debug_inference then
-        Printf.printf "⊢ %s : %s\n"
-          (string_of_term t) (string_of_term ty);
-      (ty, EqSet.empty)
-    | None ->
-      begin match lookup_cmd_opt sigg x with
-      | Some (Const (_, Some ty, _, _)) ->
-        if !debug_inference then
-          Printf.printf "⊢ %s : %s\n"
-          (string_of_term t) (string_of_term ty);
-        (ty, EqSet.empty)
-      | None -> failwith ("Free variable found during elaboration: " ^ x)
-      end
-    end
+    let ty = lookup_typ_global sigg ctx x in
+    if !debug_inference then
+      Printf.printf "⊢ %s : %s\n"
+      (string_of_term t) (string_of_term ty);
+    (ty, EqSet.empty)
 
   | App(f, arg) ->
     let (f_ty, es) = infer_type sigg ctx f in
@@ -278,7 +264,7 @@ let infer sigg ctx bvs trm =
   if !debug_inference then
     Printf.printf "Begin inferring type of %s\n" (string_of_term trm);
   mvar_count := 0;
-  let (trm', mvar_typs) = elaborate_term false sigg ctx bvs trm in
+  let (trm', mvar_typs) = elaborate_term sigg ctx bvs trm false in
   if !debug_inference && trm' <> trm then
     Printf.printf "Elaborated term to %s\n" (string_of_term trm');
 
@@ -295,7 +281,14 @@ let infer sigg ctx bvs trm =
 
 let infer_term sigg ctx trm =
   mvar_count := 0;
-  let (trm', mvar_typs) = elaborate_term true sigg ctx [] trm in
+  if !debug_inference then
+    Printf.printf "Begin elaboration of %s via type inference.\n"
+      (string_of_term trm);
+
+  let (trm', mvar_typs) = elaborate_term sigg ctx [] trm true in
+  if !debug_inference && trm' <> trm then
+    Printf.printf "Elaborated term to %s\n" (string_of_term trm');
+
   let (typ, eqs) = infer_type sigg (mvar_typs @ ctx) trm' in
   if !debug_inference then
     Printf.printf "Found type %s with constraints %s\n"

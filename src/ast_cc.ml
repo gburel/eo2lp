@@ -37,121 +37,12 @@ type app_attr =
 type cc_rule = (cc_term * cc_term) list
 type cc_command =
   | Const of string * cc_term * app_attr option
-  | Defn of string * cc_term
+  | Defn of string * cc_term * cc_term
   | Prog of string * cc_term
   | Rule of param list * cc_rule
+  | LitTy of lit_category * cc_term
 
-type cc_signature = {
-  cmds : cc_command list;
-  ltyps : (lit_category * cc_term) list;
-}
-
-(* ----- Pretty printing. ------ *)
-let dprintf b fmt =
-  if b then Printf.printf fmt
-
-let string_of_binder bb =
-  match bb with
-  | Let -> "let"
-  | Lambda -> "λ"
-  | Pi -> "Π"
-
-let string_of_literal l =
-  match l with
-  | Numeral x -> Printf.sprintf "%d" x
-  | Decimal x -> Printf.sprintf "%f" x
-  | Rational x -> Printf.sprintf "%d/%d" (fst x) (snd x)
-
-let string_of_param_attr ({implicit; list} : param_attr) =
-  let imp_str = if implicit then ":implicit" else "" in
-  let list_str = if list then ":list" else "" in
-  Printf.sprintf "{ %s }"(
-    String.concat ", " [imp_str; list_str]
-  )
-
-let string_of_var (x_opt : string option) =
-  Option.fold ~none:"_" ~some:(fun x -> x) x_opt
-
-let rec string_of_term' (bvs : (string option) list) (t : cc_term) =
-  match t with
-  | Univ KIND -> "KIND"
-  | Univ TYPE -> "TYPE"
-  | Literal l -> string_of_literal l
-  | Implicit t -> "[" ^ string_of_term' bvs t ^ "]"
-  | Var x -> x
-  | Meta x -> "?" ^ x
-  | Bound i -> (* Printf.sprintf "b%d" i *)
-    begin match List.nth_opt bvs i with
-    | Some x -> string_of_var x
-    | None   -> Printf.sprintf "b%d" i
-    end
-  | App (e1, ((Bound _|Meta _|Var _|Literal _|Implicit _) as x)) ->
-      string_of_term' bvs e1 ^ " " ^ string_of_term' bvs x
-  | App(e1,e2) ->
-      string_of_term' bvs e1 ^ " " ^ "(" ^ string_of_term' bvs (e2) ^ ")"
-  | Bind(Let, (x,x_def,_), t') ->
-      Printf.sprintf "let (%s ≡ %s) in %s"
-      (string_of_var x) (string_of_term' bvs x_def)
-      (string_of_term' (x::bvs) t')
-  | Bind(bb, ((x,_,_) as p), t') ->
-      Printf.sprintf "%s %s. %s"
-        (string_of_binder bb) (string_of_param bvs p)
-        (string_of_term' (x::bvs) t')
-
-and string_of_param bvs (x,ty,atts) =
-  let typ_str =
-    Printf.sprintf "%s : %s"
-    (string_of_var x) (string_of_term' bvs ty)
-  in
-  match (atts.implicit, atts.list) with
-  | (true, true) -> Printf.sprintf "⟦%s⟧" typ_str
-  | (true, false) -> Printf.sprintf "[%s]" typ_str
-  | (false, true) -> Printf.sprintf "⦇%s⦈" typ_str
-  | (false, false) -> Printf.sprintf "(%s)"typ_str
-let string_of_term t = string_of_term' [] t
-
-let string_of_rule (l,r) =
-  Printf.sprintf "%s ↪ %s"
-  (string_of_term l) (string_of_term r)
-
-let string_of_rules rs =
-  String.concat "\n" (List.map string_of_rule rs)
-
-let string_of_attribute att =
-  match att with
-  | RightAssoc -> ":right-assoc"
-  | LeftAssoc -> ":left-assoc"
-  | RightAssocNil trm -> ":right-assoc-nil " ^ string_of_term trm
-  | LeftAssocNil trm -> ":left-assoc-nil " ^ string_of_term trm
-  | Chainable trm -> ":chainable " ^ string_of_term trm
-  | Pairwise trm -> ":pairwise " ^ string_of_term trm
-  | Binder trm -> ":binder " ^ string_of_term trm
-
-let string_of_context ps =
-  String.concat ", " (List.map (string_of_param []) ps)
-
-let string_of_cmd cmd =
-  match cmd with
-  | Const (str, ty, att_opt) ->
-    let ty_str = Printf.sprintf " : %s" (string_of_term ty) in
-    let att_str = match att_opt with
-      | Some att -> Printf.sprintf "\n  with %s" (string_of_attribute att)
-      | None  -> ""
-    in
-      Printf.sprintf "const %s%s%s"
-        str ty_str att_str
-  | Defn (str, def) ->
-      Printf.sprintf "def %s := %s"
-        str (string_of_term def)
-  | Prog (str, ty) ->
-      Printf.sprintf "prog %s : %s"
-        str (string_of_term ty)
-  | Rule (ps, rs) ->
-    Printf.sprintf "rule %s\n%s"
-      (string_of_context ps) (string_of_rules rs)
-
-let string_of_sig sg =
-  String.concat "\n" (List.map string_of_cmd sg)
+type cc_signature = cc_command list
 
 (* ------ Utilities ------ *)
 let is_univ trm = match trm with
@@ -176,10 +67,34 @@ let is_binder bb trm = match trm with
   | Bind (bb', _, _) -> bb = bb'
   | _ -> false
 
+let cmd_att (cmd : cc_command) : app_attr option =
+  match cmd with
+  | Const (_,_,att_opt) -> att_opt
+  | _ -> None
+
+let cmd_str (cmd : cc_command) : string option =
+  match cmd with
+  | Const (str,_,_) -> Some str
+  | Defn (str,_,_) -> Some str
+  | Prog (str, _) -> Some str
+  | _ -> None
+
+let cmd_ty (cmd : cc_command) : cc_term option =
+  match cmd with
+  | Const (_,ty,_) -> Some ty
+  | Defn (_,ty,_) -> Some ty
+  | Prog (_, ty) -> Some ty
+  | _ -> None
+
 let lookup_param (ctx : cc_context) (str : string) : param option =
   List.find_opt (fun (x,_,_) -> x = Some str) ctx
 
-(* Maybe get type of name `str` in context `ctx`. *)
+let lookup_bvar (ctx : cc_context) (idx : int) : cc_term =
+  match List.nth_opt ctx idx with
+  | Some (Some x,_,_) -> Var x
+  | None -> failwith "Bound variable index out of range."
+
+(* Lookup type of `str` in context `ctx`. *)
 let lookup_typ_opt (ctx : cc_context) (str : string) : cc_term option =
   match List.find_opt (fun (x,_,_) -> x = Some str) ctx with
   | Some (_,ty,_) -> Some ty
@@ -188,45 +103,65 @@ let lookup_typ_opt (ctx : cc_context) (str : string) : cc_term option =
 let lookup_typ ctx x =
   match lookup_typ_opt ctx x with
   | Some ty -> ty
-  | None -> failwith ("FAIL! Variable not found in context: " ^ x)
+  | None -> failwith ("Variable not found in context: " ^ x)
 
-(* Maybe get command in signature `sg` with name `str`. *)
-let lookup_cmd_opt (sigg : cc_signature) (str : string) : cc_command option =
-  let cstr cmd = match cmd with
-    | Const (str, _, _, _) -> Some str
-    | _ -> None
-  in
-    List.find_opt (fun cmd -> cstr cmd = Some str) (sigg.cmds)
+(* Get command in signature with name `str`. *)
+let lookup_cmd_opt (cmds : cc_signature) (str : string) : cc_command option =
+  List.find_opt (fun cmd -> cmd_str cmd = Some str) cmds
+
+(* Lookup type of `str` in signature `sigg`. *)
+let lookup_typ_global (cmds : cc_signature) (ctx : cc_context) (str : string) : cc_term =
+  begin match lookup_typ_opt ctx str with
+  | Some ty -> ty
+  | None ->
+    let cmd_opt = lookup_cmd_opt cmds str in
+    let ty_opt = Option.bind cmd_opt cmd_ty in
+    begin match ty_opt with
+    | Some ty -> ty
+    | None -> failwith (Printf.sprintf
+        "Variable with name %s not found in context or signature." str
+      )
+    end
+  end
+
+let lookup_def (cmds : cc_signature) (str : string) : cc_term option =
+  match lookup_cmd_opt cmds str with
+  | Some (Defn (_,_,trm)) -> Some trm
+  | _ -> None
 
 (* Maybe get attribute of command with name `str` in signature `sg`. *)
 let lookup_decl_attr (sigg : cc_signature) (str : string) =
   match lookup_cmd_opt sigg str with
-  | Some (Const (_, _, _, att_opt)) -> att_opt
+  | Some (Const (_, _, att_opt)) -> att_opt
   | _ -> None
-(* given a list of commands and a string, return all the commands that
-  use the attribute corresponding to that string. *)
-let sig_filter_attr (sg : cc_command list) (str : string) =
-  let has_attr att str =
-    match (att,str) with
-    | (RightAssocNil _, "right-assoc-nil") -> true
-    | (LeftAssocNil _, "left-assoc-nil") -> true
-    | (RightAssoc, "right-assoc") -> true
-    | (LeftAssoc, "left-assoc") -> true
-    | (Chainable _, "chainable") -> true
-    | (Pairwise _, "pairwise") -> true
-    | (Binder _, "binder") -> true
-    | _ -> false
-  in
-    List.filter (function
-      | Const (_,_,_, Some att) -> has_attr att str
-      | _ -> false
-    ) sg
 
+let lookup_lit (cmds : cc_command list) (lcat : lit_category) =
+  List.find_map (function
+    | LitTy (lcat', ty) ->
+        if lcat = lcat' then (Some ty) else None
+    | _ -> None
+  ) cmds
+
+type assoc_dir = Left | Right
+
+(* for a given direction, give the list of cons and nil operators in a signature *)
+let sig_assocs (cmds : cc_command list) (dir : assoc_dir) =
+  List.filter_map (fun cmd ->
+    match (cmd_str cmd, cmd_att cmd) with
+    | Some str, Some (RightAssocNil nil) ->
+        if dir = Right then Some (Var str, nil) else None
+    | Some str, Some (LeftAssocNil nil) ->
+        if dir = Left then Some (Var str, nil) else None
+    | _ -> None
+  ) cmds
+
+
+(* Deprecate? Convert a signature to a context. *)
 let sig_context cs =
   List.filter_map (fun cmd ->
     match cmd with
-      | Const (str, Some typ,_,_) ->
-          Some (str,typ,{implicit=false; list=false})
+      | Const (str, typ, _) ->
+          Some (Some str, typ, {implicit=false; list=false})
       | _ -> None
     ) cs
 
@@ -451,3 +386,112 @@ let rec close_term (ctx : cc_context) (trm : cc_term) : cc_term =
     in
       close_term ctx (mk_pi fvar_params trm)
   end
+
+
+(* ----- Pretty printing. ------ *)
+let dprintf b fmt =
+  if b then Printf.printf fmt
+
+let string_of_binder bb =
+  match bb with
+  | Let -> "let"
+  | Lambda -> "λ"
+  | Pi -> "Π"
+
+let string_of_literal l =
+  match l with
+  | Numeral x -> Printf.sprintf "%d" x
+  | Decimal x -> Printf.sprintf "%f" x
+  | Rational x -> Printf.sprintf "%d/%d" (fst x) (snd x)
+
+let string_of_param_attr ({implicit; list} : param_attr) =
+  let imp_str = if implicit then ":implicit" else "" in
+  let list_str = if list then ":list" else "" in
+  Printf.sprintf "{ %s }"(
+    String.concat ", " [imp_str; list_str]
+  )
+
+let string_of_var (x_opt : string option) =
+  Option.fold ~none:"_" ~some:(fun x -> x) x_opt
+
+let rec string_of_term' (bvs : (string option) list) (t : cc_term) =
+  match t with
+  | Univ KIND -> "KIND"
+  | Univ TYPE -> "TYPE"
+  | Literal l -> string_of_literal l
+  | Implicit t -> "[" ^ string_of_term' bvs t ^ "]"
+  | Var x -> x
+  | Meta x -> "?" ^ x
+  | Bound i -> (* Printf.sprintf "b%d" i *)
+    begin match List.nth_opt bvs i with
+    | Some x -> string_of_var x
+    | None   -> Printf.sprintf "b%d" i
+    end
+  | App (e1, ((Bound _|Meta _|Var _|Literal _|Implicit _) as x)) ->
+      string_of_term' bvs e1 ^ " " ^ string_of_term' bvs x
+  | App(e1,e2) ->
+      string_of_term' bvs e1 ^ " " ^ "(" ^ string_of_term' bvs (e2) ^ ")"
+  | Bind(Let, (x,x_def,_), t') ->
+      Printf.sprintf "let (%s ≡ %s) in %s"
+      (string_of_var x) (string_of_term' bvs x_def)
+      (string_of_term' (x::bvs) t')
+  | Bind(bb, ((x,_,_) as p), t') ->
+      Printf.sprintf "%s %s. %s"
+        (string_of_binder bb) (string_of_param bvs p)
+        (string_of_term' (x::bvs) t')
+
+and string_of_param bvs (x,ty,atts) =
+  let typ_str =
+    Printf.sprintf "%s : %s"
+    (string_of_var x) (string_of_term' bvs ty)
+  in
+  match (atts.implicit, atts.list) with
+  | (true, true) -> Printf.sprintf "⟦%s⟧" typ_str
+  | (true, false) -> Printf.sprintf "[%s]" typ_str
+  | (false, true) -> Printf.sprintf "⦇%s⦈" typ_str
+  | (false, false) -> Printf.sprintf "(%s)"typ_str
+let string_of_term t = string_of_term' [] t
+
+let string_of_rule (l,r) =
+  Printf.sprintf "%s ↪ %s"
+  (string_of_term l) (string_of_term r)
+
+let string_of_rules rs =
+  String.concat "\n" (List.map string_of_rule rs)
+
+let string_of_attribute att =
+  match att with
+  | RightAssoc -> ":right-assoc"
+  | LeftAssoc -> ":left-assoc"
+  | RightAssocNil trm -> ":right-assoc-nil " ^ string_of_term trm
+  | LeftAssocNil trm -> ":left-assoc-nil " ^ string_of_term trm
+  | Chainable trm -> ":chainable " ^ string_of_term trm
+  | Pairwise trm -> ":pairwise " ^ string_of_term trm
+  | Binder trm -> ":binder " ^ string_of_term trm
+
+let string_of_context ps =
+  String.concat ", " (List.map (string_of_param []) ps)
+
+let string_of_cmd cmd =
+  match cmd with
+  | Const (str, ty, att_opt) ->
+    let ty_str = Printf.sprintf " : %s" (string_of_term ty) in
+    let att_str = match att_opt with
+      | Some att -> Printf.sprintf "\n  with %s" (string_of_attribute att)
+      | None  -> ""
+    in
+      Printf.sprintf "const %s%s%s"
+        str ty_str att_str
+  | Defn (str, ty, def) ->
+      Printf.sprintf "def %s : %s := %s"
+        str (string_of_term ty) (string_of_term def)
+
+  | Prog (str, ty) ->
+      Printf.sprintf "prog %s : %s"
+        str (string_of_term ty)
+  | Rule (ps, rs) ->
+    Printf.sprintf "rule %s\n%s"
+      (string_of_context ps) (string_of_rules rs)
+
+let string_of_sig sg =
+  String.concat "\n" (List.map string_of_cmd sg)
