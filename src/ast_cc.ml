@@ -312,6 +312,12 @@ let mk_pi_nameless (tys : cc_term list) (trm : cc_term) =
   in
     mk_pi ps trm
 
+let mk_pi_implicit (tys : param list) (trm : cc_term) =
+  let ps = List.map
+    (fun (x,ty,att) -> (x, ty, {att with implicit=true})) tys
+  in
+    mk_pi ps trm
+
 module StrSet = Set.Make(String)
 
 module Param = struct
@@ -482,6 +488,7 @@ let string_of_cmd cmd =
     in
       Printf.sprintf "const %s%s%s"
         str ty_str att_str
+
   | Defn (str, ty, def) ->
       Printf.sprintf "def %s : %s := %s"
         str (string_of_term ty) (string_of_term def)
@@ -489,9 +496,10 @@ let string_of_cmd cmd =
   | Prog (str, ty) ->
       Printf.sprintf "prog %s : %s"
         str (string_of_term ty)
+
   | Rule (ps, rs) ->
-    Printf.sprintf "rule %s\n%s"
-      (string_of_context ps) (string_of_rules rs)
+      Printf.sprintf "rule %s\n%s"
+        (string_of_context ps) (string_of_rules rs)
 
 let string_of_sig sg =
   String.concat "\n" (List.map string_of_cmd sg)

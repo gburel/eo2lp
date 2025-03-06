@@ -18,6 +18,11 @@ let eo_files = [
   (* "cpc-less/rules/Arith.eo"; *)
 ]
 
+let show (str : string) : string =
+  match lookup_cmd_opt (!tdata_ref.signature) str with
+  | Some cmd -> Printf.sprintf "%s" (string_of_cmd cmd)
+  | None -> Printf.sprintf "Symbol %s not found in signature" str
+
 let find_eo_files (dir : string) : string list =
   let rec aux (dir : string) (acc : string list) =
     Array.fold_left (fun acc entry ->

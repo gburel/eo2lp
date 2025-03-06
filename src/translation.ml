@@ -227,8 +227,7 @@ let base_cmd_cc (cmd : base_command) : cc_command list =
           List.map (fun (ctx, rs) ->
             mvar_count := 0;
             let (cons, mvar_ctx) =
-              elaborate_var (!tdata_ref.signature)
-              [mk_param str typ'] str true
+              elaborate_var (!tdata_ref.signature) [mk_param str typ'] str
             in
               Rule (ctx @ mvar_ctx,
                 inst_schema rs [("#cons", cons); ("#nil", nil)])
@@ -273,23 +272,24 @@ let eunoia_cmd_cc (cmd : eunoia_command) =
 
   | DeclareRule (str, ps, rspec) ->
     let ctx = List.map (eo_var_cc [] []) ps in
+    let concl_bool = eo_cc_term ctx [] rspec.conclusion in
+    let concl = appvar "Proof" [concl_bool] in
+
     let rule_typ_body =
-      let concl_bool = eo_cc_term ctx [] rspec.conclusion in
-      let concl_ty = appvar "Proof" [concl_bool] in
       begin match rspec.prems with
       | Some (Premises ts) ->
         let prem_tys = List.map (fun t ->
           appvar "Proof" [eo_cc_term ctx [] t]) ts
         in
-          mk_pi_nameless prem_tys concl_ty
+          mk_pi_nameless prem_tys concl
       | Some (PremiseList (trm,op)) ->
         let prem_trm = eo_cc_term ctx [] trm in
         let op_trm = eo_cc_term ctx [] op in
         appvar "If" [
           appvar "eo::is_list" [op_trm; prem_trm];
-          mk_pi_nameless [appvar "Proof" [prem_trm]] concl_ty
+          mk_pi_nameless [appvar "Proof" [prem_trm]] concl
         ]
-      | None -> concl_ty
+      | None -> concl
       end
     in
 
@@ -314,31 +314,53 @@ let eunoia_cmd_cc (cmd : eunoia_command) =
     let arg_tys = List.map
       (infer (!tdata_ref.signature) ctx []) arg_ptrns in
 
+    let aux_params = ParamSet.to_list
+      (ParamSet.diff
+        (filter_vars ctx rule_typ_body)
+        (map_filter_vars ctx arg_ptrns)
+      )
+    in
     let aux_str = str ^ "_aux" in
-    let aux_typ_body = mk_pi_nameless (prop_tys @ arg_tys) (Univ TYPE) in
+    let aux_typ_body =
+      mk_pi_nameless arg_tys (
+        mk_pi aux_params (Var "Bool")
+      )
+    in
     let aux_typ = close_term ctx aux_typ_body in
 
+    let aux_param_vars = List.map param_var aux_params in
     (* elaborate lhs/rhs with explicits where needed.*)
     let ctx' = (mk_param aux_str aux_typ) :: ctx in
     let rw_rules = map_cc_rule
-      (infer_term (!tdata_ref.signature) ctx')
-      [(appvar aux_str (prop_ptrns @ arg_ptrns), rule_typ_body)]
+      (infer_term (!tdata_ref.signature) ctx' [])
+      [(appvar aux_str (arg_ptrns @ aux_param_vars), concl_bool)]
     in
     let aux_decl = [ Prog (aux_str, aux_typ); Rule (ctx, rw_rules) ] in
     (* step 2. create signature for main inference rule. *)
       (* create parameters for each arg-pattern *)
-    let prop_params = List.mapi (fun i ty ->
-      mk_param ("p" ^ string_of_int i) ty)
-      prop_tys
-    and arg_params = List.mapi (fun i ty ->
-      mk_param ("x" ^ string_of_int i) ty)
-      arg_tys
+    let arg_params = List.mapi (fun i ty ->
+      mk_param ("x" ^ string_of_int i) ty
+    ) arg_tys
     in
+      (* let str =
+        if i < List.length arg_tys then
+          "x" ^ string_of_int i
+        else if i < List.length arg_tys + List.length prop_tys - 1 then
+          "p" ^ string_of_int (i - List.length arg_tys)
+        else
+          "q"
+      in *)
 
     (* eta-expand auxillary function.*)
-    let aux_vars = List.map param_var (prop_params @ arg_params) in
-    let aux_app =  appvar aux_str aux_vars in
-    let rule_typ_raw = mk_pi (prop_params @ arg_params) aux_app in
+    let aux_vars = List.map param_var (arg_params @ aux_params) in
+    let aux_app =  appvar "Proof" [appvar aux_str aux_vars] in
+    let rule_typ_raw = mk_pi_implicit aux_params
+      (
+        mk_pi_nameless
+          (List.map (fun prop -> appvar "Proof" [prop]) prem_ptrns)
+          (mk_pi arg_params aux_app)
+      )
+    in
     let rule_typ = close_term ctx rule_typ_raw in
 
     aux_decl @ [ Const (str, rule_typ, None) ]
@@ -359,7 +381,7 @@ let eunoia_cmd_cc (cmd : eunoia_command) =
     let ty = mk_pi ty_binds ty_raw in
     let rs = List.map (eo_cc_rule params []) eo_rs in
     let ctx' = (mk_param str ty) :: params in
-    let rs' = map_cc_rule (infer_term !tdata_ref.signature ctx') rs in
+    let rs' = map_cc_rule (infer_term !tdata_ref.signature ctx' []) rs in
 
     begin match att_str_opt with
     | Some att_str ->
@@ -372,7 +394,7 @@ let eunoia_cmd_cc (cmd : eunoia_command) =
         mvar_count := 0;
         let (cons, mvar_ctx) =
           elaborate_var (!tdata_ref.signature)
-          [mk_param cons_str ty] cons_str true
+          [mk_param cons_str ty] cons_str
         in
           Rule (
             params @ mvar_ctx,
@@ -387,6 +409,20 @@ let eunoia_cmd_cc (cmd : eunoia_command) =
 
   | Reference _ -> failwith "undefined"
 
+let proof_prop (trm : cc_term) : cc_term =
+  match trm with
+  | Var str ->
+    let typ = lookup_typ_global !tdata_ref.signature [] str in
+    begin match typ with
+    | App (Var "Proof", prop) -> prop
+    | _ -> failwith (Printf.sprintf
+        "Not a proof term: (%s : %s)"
+        (string_of_term trm)(string_of_term typ)
+      )
+    end
+  | _ -> failwith (Printf.sprintf "Not a variable: %s" (string_of_term trm))
+
+
 let proof_cmd_cc (cmd : proof_command) : cc_command list =
   match cmd with
   | Assume (str, trm) ->
@@ -396,20 +432,29 @@ let proof_cmd_cc (cmd : proof_command) : cc_command list =
 
   | Step (str, trm_opt, rule, prem_opt, arg_opt) ->
     (* make type of proof term *)
-    let trm' = eo_cc_term [] [] (Option.get trm_opt) in
-    let typ = appvar "Proof" [trm'] in
+    let concl_prop = eo_cc_term [] [] (Option.get trm_opt) in
+    let concl = appvar "Proof" [concl_prop] in
     (* now make definition/body *)
+
     let prems = match prem_opt with
       | Some (Premises ts) -> List.map (eo_cc_term [] []) ts
       | _ -> []
     in
+    (* let prem_props = List.map proof_prop prems in *)
     let args = match arg_opt with
       | Some ts -> List.map (eo_cc_term [] []) ts
       | None -> []
     in
-    let def = appvar rule (args @ prems) in
-    (* let def' = infer_term !tdata_ref.signature [] def in *)
-    [ Defn (str, typ, def) ]
+    let def = appvar rule (prems @ args) in
+    let tdefs = List.filter_map (fun cmd ->
+      match cmd with
+      | Defn (str, _, trm) ->
+          if String.starts_with ~prefix:"@t" str
+          then Some (str, trm) else None
+      | _ -> None
+    ) !tdata_ref.signature in
+    let def' = infer_term !tdata_ref.signature [] tdefs def in
+    [ Defn (str, concl, def') ]
 
   | AssumePush _ -> failwith "undefined"
   | StepPop _ -> failwith "undefined"

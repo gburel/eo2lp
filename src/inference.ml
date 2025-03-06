@@ -24,35 +24,31 @@ let rec mk_mvars (trm : cc_term) : param list =
   all of the metavariables generated paired with their types.
   *)
 (* TODO. only add implicit 'holes' at the very end when subsituting metavariables.*)
-let add_metavars x ty imp =
+let add_metavars x ty =
   if is_binder Pi ty then
     let ys = mk_mvars ty in
-    let mvs = List.map (fun (Some str, _, _) ->
-      if imp then
-        Implicit (Meta str)
-      else
-        Meta str
-    ) ys in (appvar x mvs, ys)
+    let mvs = List.map (fun (Some str, _, _) -> Meta str) ys in
+    (appvar x mvs, ys)
   else (Var x, [])
 
-let elaborate_var sigg ctx str imp =
-  add_metavars str (lookup_typ_global sigg ctx str) imp
+let elaborate_var sigg ctx str =
+  add_metavars str (lookup_typ_global sigg ctx str)
 
 let rec elaborate_term
   (cmds : cc_command list) (ctx : cc_context) (bvs : cc_context)
-  (trm : cc_term) (imp : bool) : (cc_term * cc_context) =
+  (trm : cc_term) : (cc_term * cc_context) =
   match trm with
   | (Univ _|Meta _|Literal _) -> (trm, [])
   | Bound i -> (lookup_bvar ctx i, [])
-  | Var str -> elaborate_var cmds ctx str imp
+  | Var str -> elaborate_var cmds ctx str
   | App (e1,e2) ->
-    let (e1', c1) = elaborate_term cmds ctx bvs e1 imp in
-    let (e2', c2) = elaborate_term cmds ctx bvs e2 imp in
+    let (e1', c1) = elaborate_term cmds ctx bvs e1 in
+    let (e2', c2) = elaborate_term cmds ctx bvs e2 in
     (App (e1',e2'), c1 @ c2)
   | Bind (bb, (x, ty, att), trm') ->
-    let (ty', c1) = elaborate_term cmds ctx bvs ty imp in
+    let (ty', c1) = elaborate_term cmds ctx bvs ty in
     let ctx' = (x, ty', att) :: ctx in
-    let (trm'', c2) = elaborate_term cmds ctx' ((x,ty',att)::bvs) trm' imp in
+    let (trm'', c2) = elaborate_term cmds ctx' ((x,ty',att)::bvs) trm' in
     (Bind (bb, (x, ty', att), trm''), c1 @ c2)
 
 (* TODO. reimplement using sets rather than lists to avoid constraint duplication*)
@@ -116,7 +112,7 @@ let rec infer_type
 
   | Bind(Lambda, (x,ty,att), body) ->
     let body' = Option.fold ~none:body ~some:(fun x -> (subst (Var x) 0 body)) x in
-    let (body_type, es) = infer_type sigg ((x,ty,att)::ctx) body'  in
+    let (body_type, es) = infer_type sigg ((x,ty,att)::ctx) body' in
     let lam_typ = mk_pi [(x,ty,att)] body_type in
     (lam_typ, es)
 
@@ -173,77 +169,76 @@ and whnf (ctx : cc_context) (trm : cc_term) : cc_term =
     Bind(bb, (x,ty',att), body')
   | _ -> trm
 
-type mvar_subst = (string * cc_term) list
+type msubst = (string * cc_term) list
 
-let string_of_meta_subst (msub : mvar_subst) =
+let string_of_meta_subst (msub : msubst) =
   let fs = List.map (fun (v,t) ->
     string_of_term (Meta v) ^ " ↦ " ^ string_of_term t) in
   let s = String.concat "; " (fs msub) in
   Printf.sprintf "⦃ %s ⦄" s
 
-let rec apply_meta_subst (msub : mvar_subst) (trm : cc_term) =
-match trm with
-| Univ u  -> Univ u
-| Var x   -> Var x
-| Bound i -> Bound i
-| Implicit t -> Implicit (apply_meta_subst msub t)
-| Meta s ->
-  begin match List.assoc_opt s msub with
-  | Some t -> t
-  | None -> Meta s
-  end
-| App (e1,e2) ->
-    App (apply_meta_subst msub e1, apply_meta_subst msub e2)
-| Bind (bb, (x, ty, att), body) ->
-    Bind (bb,
-      (x, apply_meta_subst msub ty, att),
-      apply_meta_subst msub body
-    )
+let rec app_msubst (msub : msubst) (trm : cc_term) (imp : bool) : cc_term =
+  match trm with
+  | Univ u  -> Univ u
+  | Var x   -> Var x
+  | Bound i -> Bound i
+  | Implicit t -> Implicit (app_msubst msub t imp)
+  | Meta s ->
+    begin match List.assoc_opt s msub with
+    | Some t -> if imp then Implicit t else t
+    | None -> Meta s
+    end
+  | App (e1,e2) -> App (app_msubst msub e1 imp, app_msubst msub e2 imp)
+  | Bind (bb, (x, ty, att), body) ->
+      Bind (bb,
+        (x, app_msubst msub ty imp, att),
+        app_msubst msub body imp
+      )
 
-let rec unify (ctx : cc_context) (cs : Equation.t list) (sigma : mvar_subst) : mvar_subst =
+let rec unify (ctx : cc_context) (cs : Equation.t list) (msub : msubst) : msubst =
   match cs with
-  | [] -> sigma
+  | [] -> msub
   | (t,u) :: js ->
     (* 1. Apply current substitution & whnf. *)
-    let t' = whnf ctx (apply_meta_subst sigma t) in
-    let u' = whnf ctx (apply_meta_subst sigma u) in
-    let msub_cs f = List.map (fun (m, t) -> (m, apply_meta_subst f t)) in
+    let t' = whnf ctx (app_msubst msub t false) in
+    let u' = whnf ctx (app_msubst msub u false) in
+    let msub_cs f = List.map (fun (m, t) -> (m, app_msubst f t false)) in
     match (t', u') with
-    | (Meta m, Meta m') when m = m' -> unify ctx js sigma
+    | (Meta m, Meta m') when m = m' -> unify ctx js msub
 
     | (Meta m, _) ->
         if occurs_check m u' then
           failwith "Occurs check failure"
         else
-          let sigma' = (m, u') :: sigma in
-          unify ctx (msub_cs sigma' js) sigma'
+          let msub' = (m, u') :: msub in
+          unify ctx (msub_cs msub' js) msub'
 
     | (_, Meta m) ->
         if occurs_check m t' then
           failwith "Occurs check failure"
         else
-          let sigma' = (m, t') :: sigma in
-          unify ctx (msub_cs sigma' js) sigma'
+          let msub' = (m, t') :: msub in
+          unify ctx (msub_cs msub' js) msub'
 
     | (App(f1, a1), App(f2, a2)) ->
         (* unify the heads, unify the arguments *)
-        unify ctx ((f1, f2) :: (a1, a2) :: js) sigma
+        unify ctx ((f1, f2) :: (a1, a2) :: js) msub
 
     | (Implicit t, _) ->
-        unify ctx ((t, u') :: js) sigma
+        unify ctx ((t, u') :: js) msub
 
     | (_, Implicit u) ->
-        unify ctx ((t', u) :: js) sigma
+        unify ctx ((t', u) :: js) msub
 
     | (Bind(bb1, (_, tA1, att1), b1), Bind(bb2,(_, tA2, att2), b2))
       when bb1 = bb2 && att1 = att2 ->
-        unify ctx ((tA1, tA2) :: (b1,b2) :: js) sigma
+        unify ctx ((tA1, tA2) :: (b1,b2) :: js) msub
 
     | (Univ u1, Univ u2) when u1 = u2 ->
-        unify ctx js sigma
+        unify ctx js msub
 
     | (Var x, Var y) when x = y ->
-        unify ctx js sigma
+        unify ctx js msub
 
     | _ ->
         failwith "Unification failure"
@@ -264,7 +259,7 @@ let infer sigg ctx bvs trm =
   if !debug_inference then
     Printf.printf "Begin inferring type of %s\n" (string_of_term trm);
   mvar_count := 0;
-  let (trm', mvar_typs) = elaborate_term sigg ctx bvs trm false in
+  let (trm', mvar_typs) = elaborate_term sigg ctx bvs trm in
   if !debug_inference && trm' <> trm then
     Printf.printf "Elaborated term to %s\n" (string_of_term trm');
 
@@ -277,25 +272,34 @@ let infer sigg ctx bvs trm =
   if !debug_inference then
     Printf.printf "Found unifier %s\n" (string_of_meta_subst msub);
 
-  apply_meta_subst msub typ
+  app_msubst msub typ false
 
-let infer_term sigg ctx trm =
+let rec expand_defs (defs : (string * cc_term) list) (trm : cc_term) : cc_term =
+  map_cc_term (fun _ str ->
+    match List.assoc_opt str defs with
+    | Some trm -> expand_defs defs trm
+    | None -> Var str
+  ) [] trm
+
+let infer_term sigg ctx defs trm =
   mvar_count := 0;
   if !debug_inference then
     Printf.printf "Begin elaboration of %s via type inference.\n"
       (string_of_term trm);
 
-  let (trm', mvar_typs) = elaborate_term sigg ctx [] trm true in
+  let (trm', mvar_typs) = elaborate_term sigg ctx [] trm in
   if !debug_inference && trm' <> trm then
     Printf.printf "Elaborated term to %s\n" (string_of_term trm');
 
   let (typ, eqs) = infer_type sigg (mvar_typs @ ctx) trm' in
+  let eqs' = EqSet.map (fun (t,t') -> (expand_defs defs t, expand_defs defs t')) eqs in
+
   if !debug_inference then
     Printf.printf "Found type %s with constraints %s\n"
-    (string_of_term typ) (string_of_equations eqs);
+    (string_of_term typ) (string_of_equations eqs');
 
-  let msub = unify ctx (List.rev (EqSet.to_list eqs)) [] in
+  let msub = unify ctx (List.rev (EqSet.to_list eqs')) [] in
   if !debug_inference then
     Printf.printf "Found unifier %s\n" (string_of_meta_subst msub);
 
-  apply_meta_subst msub trm'
+  app_msubst msub trm' true
