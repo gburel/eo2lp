@@ -86,7 +86,7 @@ rule token = parse
   | "<hexadecimal>"  { HEX }
   (* syntactic literals *)
   | symbol as s      { SYMBOL s }
-  | string as s      { STRING s }
+  | '"' (([^'"'])* as s) '"' { STRING s }
   | numeral as x     { NUMERAL (int_of_string x) }
   | decimal as x     { DECIMAL (float_of_string x) }
   | rational as x    { RATIONAL

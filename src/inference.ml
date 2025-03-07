@@ -1,7 +1,7 @@
 open Ast_cc
 open Ast
 
-let debug_inference = ref true
+let debug_inference = ref false
 
 (* mutable reference for generating fresh metavariable names. *)
 let mvar_count = ref 0
@@ -107,7 +107,7 @@ let rec infer_type
           else EqSet.singleton (ty, arg_ty) in
         let body' = subst arg 0 body in
         (body', EqSet.union c' (EqSet.union es fs))
-    | _ -> failwith "Applied function doesn't have a Π-type."
+    | _ -> failwith "Applied function doesn't have a Pi-type."
     end
 
   | Bind(Lambda, (x,ty,att), body) ->

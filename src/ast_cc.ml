@@ -191,6 +191,7 @@ let mk_pairwise (f : cc_term) (agg : cc_term) (args : cc_term list) : cc_term =
   match args with
   | [] -> f
   | [x] -> App (f,x)
+  | [x;y] -> App (App (f,x),y)
   | _ ->
     let pairs = all_pairs args in
     app agg (List.map (fun (a,b) -> app f [a; b]) pairs)

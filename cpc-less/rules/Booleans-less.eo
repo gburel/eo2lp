@@ -1,6 +1,6 @@
 (include "../theories/Builtin.eo")
-(include "../theories/eo::Ints.eo")
-(include "../programs/Nary.eo")
+(include "../theories/Ints.eo")
+(include "../programs/Nary-less.eo")
 
 ; rule: split
 ; implements: ProofRule::SPLIT.

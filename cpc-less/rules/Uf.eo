@@ -75,11 +75,14 @@
 ; - E Bool: A conjunction of the remaining equalities we have left to process, in reverse order.
 ; return: >
 ;   The right hand side of the equality.
-(program $mk_cong_rhs ((T Type) (U Type) (f (-> U T)) (t1 U) (t2 U) (t3 U) (tail Bool :list))
+(program $mk_cong_rhs ((T Type) (U Type) (f (-> T U)) (t1 T) (t2 T) (tail Bool :list))
     (U Bool) U
     (
-        (($mk_cong_rhs (f t1) (and (= t1 t2) tail))  (_ ($mk_cong_rhs f tail) t2))
-        (($mk_cong_rhs f true)                       f)
+        (
+          ($mk_cong_rhs (_ f t1) (and (= t1 t2) tail))
+          (_ ($mk_cong_rhs f tail) t2)
+        )
+        ( ($mk_cong_rhs f true)                       f)
     )
 )
 
@@ -111,7 +114,8 @@
 ; return: >
 ;   The right hand side of the equality proven by nary_cong for f and
 ;   the given premises E.
-(program $mk_nary_cong_rhs ((U Type) (f (-> U U U)) (s1 U) (s2 U) (t U :list) (tail Bool :list) (nil U))
+(program-schema :right-assoc-nil
+  $mk_nary_cong_rhs ((U Type) (f (-> U U U)) (s1 U) (s2 U) (t U :list) (tail Bool :list) (nil U))
     (U Bool) U
     (
         (($mk_nary_cong_rhs (f s1 t) (and (= s1 s2) tail))  (eo::cons f s2 ($mk_nary_cong_rhs t tail)))
@@ -196,7 +200,7 @@
 ; return: >
 ;   An equality where the original terms are applied to the left and
 ;   right hand sides of the equalities given by E.
-(program $mk_ho_cong ((T Type) (U Type) (f1 (-> T U)) (f2 (-> T U)) (t1 U) (t2 U) (tail Bool :list))
+(program $mk_ho_cong ((T Type) (U Type) (f1 (-> T U)) (f2 (-> T U)) (t1 T) (t2 T) (tail Bool :list))
     (U U Bool) Bool
     (
         (($mk_ho_cong f1 f2 (and (= t1 t2) tail)) ($mk_ho_cong (f1 t1) (f2 t2) tail))

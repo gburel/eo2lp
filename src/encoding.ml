@@ -130,8 +130,9 @@ let cc_lp_binder (bb : cc_binder) =
 let cc_lp_iden (str_opt : string option) : string =
   begin match str_opt with
   | None -> "_"
+  | Some "_" -> "{|_|}"
   | Some str ->
-    let forbidden = "_\t\r\n :,;`(){}[]\".@$|?/" in
+    let forbidden = "\t\r\n :,;`(){}[]\".@$|?/" in
     let is_valid_regular s =
       if s = "/" then true
       else if s = "" then false

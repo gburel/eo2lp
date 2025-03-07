@@ -1,3 +1,5 @@
+(include "../CompOp.eo")
+
 ; =============================================
 ;  Right-associative null-terminated operators
 ;

@@ -1,14 +1,33 @@
 open Ast
 open Ast_cc
 open Inference
+open Graph.Imperative
+open Map
+open Filename
 
-(* open Prelude *)
+module StrMap = Map.Make(String)
+
 
 type tdata = {
   asserts : int;
   rschema : (string * (cc_context * (cc_term * cc_term) list)) list;
   signature : cc_signature;
+  filepath : string;
+  deps : StrSet.t StrMap.t
 }
+
+let normalize_path (ipath : string) (fpath : string) =
+  let fpath' = Filename.dirname fpath in
+  let delim = Filename.dir_sep in
+  let dirs = String.split_on_char (delim.[0])
+    (Filename.chop_extension ipath) in
+  let rec move fp = function
+  | (".." :: xs) -> move (Filename.dirname fp) xs
+  | xs -> (fp, xs)
+  in
+  let (fpath'', dirs') = move fpath' dirs in
+  let fpath_dirs = String.split_on_char (delim.[0]) fpath'' in
+  String.concat "." ((List.tl fpath_dirs) @ dirs')
 
 let tdata_init =
   let init =
@@ -29,6 +48,8 @@ let tdata_init =
     asserts = 0;
     rschema = [];
     signature = init;
+    filepath = "";
+    deps = StrMap.empty;
   }
 
 let tdata_ref = ref tdata_init
@@ -301,7 +322,7 @@ let eunoia_cmd_cc (cmd : eunoia_command) =
       | None -> [ ]
       end
     in
-    let prop_ptrns = prem_ptrns @ [eo_cc_term ctx [] rspec.conclusion] in
+
     let arg_ptrns = Option.fold
       ~none:[] ~some:(List.map (eo_cc_term ctx []))
       rspec.arguments
@@ -309,8 +330,6 @@ let eunoia_cmd_cc (cmd : eunoia_command) =
 
     (* step 1. create type signature and rewrite rule for auxillary.*)
     (* calculate type of each pattern under current signature and context.*)
-    let prop_tys = List.map
-      (fun _ -> Var "Bool") prop_ptrns in
     let arg_tys = List.map
       (infer (!tdata_ref.signature) ctx []) arg_ptrns in
 
@@ -370,7 +389,19 @@ let eunoia_cmd_cc (cmd : eunoia_command) =
 
   | DeclareParamConst _ -> failwith "undefined"
   | DeclareOracleFun _ -> failwith "undefined"
-  | Include _ -> []
+
+  | Include ip ->
+    let ip' = normalize_path ip (!tdata_ref.filepath) in
+    let fp' = normalize_path (!tdata_ref.filepath) "" in
+    let deps' =
+      StrMap.update fp' (function
+      | Some paths -> Some (StrSet.add ip'  paths)
+      | None -> Some (StrSet.singleton ip')
+      ) !tdata_ref.deps
+    in
+      tdata_ref := { !tdata_ref with deps = deps'};
+    []
+
   | Program (str, att_str_opt, eo_ps, dom_tys, ran_ty, eo_rs) ->
     let params = List.map (eo_var_cc [] []) eo_ps in
     let ty_raw = eo_arrow_cc params [] (dom_tys @ [ran_ty]) in
