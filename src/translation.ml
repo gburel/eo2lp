@@ -1,9 +1,6 @@
 open Ast
 open Ast_cc
 open Inference
-open Graph.Imperative
-open Map
-open Filename
 
 module StrMap = Map.Make(String)
 
@@ -175,7 +172,7 @@ and eo_match_cc ctx bvs ps trm rs =
     };
 
     (* Add program declarations to signature in global ref. *)
-    Printf.printf "%s\n" (string_of_sig prog_sig);
+    (* Printf.printf "%s\n" (string_of_sig prog_sig); *)
     tdata_ref := { !tdata_ref with
       signature = prog_sig @ !tdata_ref.signature
     };

@@ -90,7 +90,7 @@
     ((L Type) (x L) (xs L :list) (#cons (-> L L L)) (#nil L))
     (L) L
     (
-        (($nary_reverse (#cons x xs)) (eo::define ((#nil (eo::nil #cons))) ($nary_reverse_rec #cons #nil (#cons x xs) #nil)))
+        (($nary_reverse (#cons x xs)) ($nary_reverse_rec #cons #nil (#cons x xs) #nil))
         (($nary_reverse x)           x)
     )
 )

@@ -1,5 +1,4 @@
 (include "../theories/Builtin.eo")
-(include "../theories/Ints.eo")
 (include "../programs/Nary-less.eo")
 
 ; rule: split

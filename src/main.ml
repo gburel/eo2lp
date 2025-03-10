@@ -5,6 +5,8 @@ open Filename
 open Translation
 open Encoding
 
+let debug_encode = ref false
+
 let string_of_strset str =
     StrSet.fold (fun str acc -> Printf.sprintf "%s, %s" str acc) str ""
 let string_of_strmap = StrMap.iter (fun str x -> Printf.printf "%s ~~> {%s}\n" str (string_of_strset x))
@@ -15,9 +17,9 @@ let eo_files = [
   "cpc-less/programs/Nary-less.eo";
   "cpc-less/theories/Builtin.eo";
   "cpc-less/rules/Builtin.eo";
-  (* "cpc-less/rules/Booleans-less.eo";
+  "cpc-less/rules/Booleans-less.eo";
   "cpc-less/rules/Rewrites-less.eo";
-  "cpc-less/rules/Uf.eo"; *)
+  (* "cpc-less/rules/Uf.eo";  *)
   (* "test/rodin/smt1468783596909311386.smt2.prf"; *)
   (* "cpc-less/rules/Uf.eo"; *)
   (* "cpc-less/rules/Arith.eo"; *)
@@ -79,10 +81,13 @@ let proc_eo_cmd (cmd : eo_command)  =
     if cs <> [] then
       List.fold_right (fun cmd acc ->
         tdata_ref := { !tdata_ref with signature = cmd :: !tdata_ref.signature };
-        Printf.printf "Encoding command...\n%s\n" (string_of_cmd cmd);
         let lp_cmd = cc_lp cmd in
-          Printf.printf "Done!\n%s\n\n" (string_of_lp_cmd lp_cmd); (lp_cmd :: acc)
-        (* output_char ch '\n'; *)
+        if !debug_encode then
+          begin
+            Printf.printf "Encoding command...\n%s\n" (string_of_cmd cmd);
+            Printf.printf "Done!\n%s\n\n" (string_of_lp_cmd lp_cmd);
+          end;
+        (lp_cmd :: acc)
       ) (!ddata_ref.match_progs @ cs) []
     else []
   end
@@ -110,6 +115,13 @@ let lp_imports (fp : string) : string =
     let import_str = String.concat " " (StrSet.to_list eo_trcl) in
     Printf.sprintf "require open %s;" import_str
 
+let rec create_parent_dir fn =
+  let parent_dir = Filename.dirname fn in
+  if not (Sys.file_exists parent_dir) then begin
+    create_parent_dir parent_dir;
+    Sys.mkdir parent_dir 0o755
+  end
+
 let proc_eo_file (fp : string) =
   begin
     Printf.printf "Parsing file %s... " fp;
@@ -121,19 +133,19 @@ let proc_eo_file (fp : string) =
     tdata_ref := { !tdata_ref with filepath = fp' };
     let eo_cmds = parse_file fp in
     let lp_cmds = List.concat_map proc_eo_cmd eo_cmds in
-
     let lp_fp = Filename.concat "lp" (Filename.chop_extension fp') ^ ".lp" in
-    Printf.printf "%s" lp_fp;
-    try Sys.mkdir (Filename.dirname lp_fp) 0o755 with Sys_error _ -> Printf.printf "fail!";
-    let ch = open_out lp_fp in
 
-    write_line ch (Printf.sprintf "// Begin translation of: %s" fp);
-    List.iter (write_line ch) generic_imports;
-    write_line ch (lp_imports (normalize_path fp' ""));
-    List.iter (write_lp_cmd ch) lp_cmds;
-    Printf.printf "Done!\n";
-    output_char ch '\n';
-    close_out ch;
+    Printf.printf "Begin writing file: %s\n" lp_fp;
+    let ch = create_parent_dir lp_fp; open_out lp_fp in
+    begin
+      write_line ch (Printf.sprintf "// Begin translation of: %s" fp);
+      List.iter (write_line ch) generic_imports;
+      write_line ch (lp_imports (normalize_path fp' ""));
+      List.iter (write_lp_cmd ch) lp_cmds;
+      Printf.printf "Done!\n";
+      output_char ch '\n';
+      close_out ch;
+    end
   end
 
 let main : unit =
