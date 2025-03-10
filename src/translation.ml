@@ -2,15 +2,13 @@ open Ast
 open Ast_cc
 open Inference
 
-module StrMap = Map.Make(String)
-
-
-type tdata = {
-  asserts : int;
-  rschema : (string * (cc_context * (cc_term * cc_term) list)) list;
-  signature : cc_signature;
-  filepath : string;
-  deps : StrSet.t StrMap.t
+type translation_data = {
+  mutable asserts : int;
+  mutable rschema : (string * (param list * (cc_term * cc_term) list)) list;
+  mutable context : cc_context;
+  mutable signature : cc_signature;
+  mutable filepath : string;
+  mutable deps : StrSet.t StrMap.t;
 }
 
 let normalize_path (ipath : string) (fpath : string) =
@@ -26,60 +24,59 @@ let normalize_path (ipath : string) (fpath : string) =
   let fpath_dirs = String.split_on_char (delim.[0]) fpath'' in
   String.concat "." ((List.tl fpath_dirs) @ dirs')
 
-let tdata_init =
+let tdata =
   let init =
     let typ = mk_pi
       [
-        (Some "S", Univ TYPE, { implicit=true; list=false });
-        (None, Var "S", { implicit=false; list=false })
+        (Some "S", Univ TYPE, {atts_init with implicit=true});
+        (None, Var "S", atts_init)
       ]
         (Univ TYPE)
     in
       [
         Prog ("eo::typeof", typ);
-        Const ("Bool", Univ TYPE, None);
-        Const ("Proof", mk_pi_nameless [Var "Bool"] (Univ TYPE), None);
+        Const ("Bool", Univ TYPE);
+        Const ("Proof", mk_pi_nameless [Var "Bool"] (Univ TYPE));
       ]
   in
   {
     asserts = 0;
     rschema = [];
     signature = init;
+    context = StrMap.empty;
     filepath = "";
     deps = StrMap.empty;
   }
 
-let tdata_ref = ref tdata_init
 
 (* during declaration translation, we (globally) track:
    name of current declaration, program declarations for encountered matches, and a context.*)
-type ddata = {
-  decl_name : string;
-  matches : int;
-  match_progs : cc_command list
+type declaration_data = {
+  mutable name : string;
+  mutable matches : int;
+  mutable match_progs : cc_command list
 }
 
-let ddata_init = {
-  decl_name = "";
+let ddata = {
+  name = "";
   matches = 0;
   match_progs = []
 }
 
-let ddata_ref = ref ddata_init
-
-let eo_decl_attr (attr : attr list) : param_attr =
-  {
-    implicit = List.mem_assoc "implicit" attr;
-    list = List.mem_assoc "list" attr;
+let eo_decl_attr (eo_atts : attr list) : cc_atts =
+  { atts_init with
+      implicit = List.mem_assoc "implicit" eo_atts;
+      list = List.mem_assoc "list" eo_atts;
   }
 
-let rec eo_cc_term (ctx : cc_context) (bvs : cc_context) (trm : eo_term) : cc_term =
+let rec eo_cc_term (ctx : cc_context) (bvs : param list) (trm : eo_term) : cc_term =
   begin match trm with
   | Literal l -> Literal l
   | Symbol str ->
+    (*TODO. implement Rish's hashmap trick. *)
     if str = "Type" then
       Univ TYPE
-    else (*TODO. implement Rish's hashmap trick. *)
+    else
       begin match List.find_index (fun (x,_,_) -> x = Some str) bvs with
         | Some n -> Bound n
         | None -> Var str
@@ -90,11 +87,8 @@ let rec eo_cc_term (ctx : cc_context) (bvs : cc_context) (trm : eo_term) : cc_te
       | "->" -> eo_arrow_cc ctx bvs args
       | _ ->
         let args' = List.map (eo_cc_term ctx bvs) args in
-        let att_opt = lookup_decl_attr !tdata_ref.signature str in
-        (*The only attribute we care about in application is :list?
-        But this isn't currently stored in the cc_context.
-        Once again we need to refactor and store attributes in context. *)
-        mk_app ctx (Var str) args' att_opt
+        let (_,_,atts) = StrMap.find str tdata.context in
+        mk_app ctx (Var str) args' (atts.apply)
     end
   | Attributed (trm, reqs, atts) ->
     begin match reqs with
@@ -129,19 +123,17 @@ and eo_match_cc ctx bvs ps trm rs =
   begin
     let prog_name =
       Printf.sprintf "%s_match_%d"
-      (!ddata_ref.decl_name) (!ddata_ref.matches) in
+      (ddata.name) (ddata.matches) in
 
-    let ps' = List.map (eo_var_cc ctx bvs) ps in
-    let ctx' = ps' @ ctx in
+    let params = List.map (eo_var_cc ctx []) ps in
+    let ctx' = List.fold_left (fun acc p -> ctx_add p acc) ctx params in
 
     (* Infer types of lhs/rhs of first rule, wrt.
     locally-bound variables, and global constants. *)
     let rs' = List.map (eo_cc_rule ctx' bvs) rs in
     let (lhs,rhs) = List.hd rs' in
-    let (ty_lhs, ty_rhs) =
-      (infer !tdata_ref.signature ctx' bvs lhs,
-       infer !tdata_ref.signature ctx' bvs rhs)
-    in
+    let glob_ctx = StrMap.union (fun _ p _ -> Some p) (tdata.context) ctx' in
+    let (ty_lhs, ty_rhs) = (infer glob_ctx lhs, infer glob_ctx rhs) in
     let prog_ty_raw = mk_pi_nameless [ty_lhs] ty_rhs in
 
     (* Collect all variables are bound (e.g., by a lambda or pi),
@@ -155,27 +147,21 @@ and eo_match_cc ctx bvs ps trm rs =
     let free_vars = List.map param_var free_params in
 
     let prog_app = appvar prog_name (bound_vars @ free_vars)
- in
+  in
     let prog_rules = List.map
       (fun (l,r) -> (App (prog_app, l), r)) rs' in
     let prog_sig =
       [
         Prog (prog_name, prog_ty);
-        Rule (ps' @ bound_params @ free_params, prog_rules)
+        Rule (params @ bound_params @ free_params, prog_rules)
       ]
     in
 
-    (* Add match program declarations and increment counter in per-declaration ref. *)
-    ddata_ref := { !ddata_ref with
-      matches = !ddata_ref.matches + 1;
-      match_progs = prog_sig @ !ddata_ref.match_progs;
-    };
-
-    (* Add program declarations to signature in global ref. *)
-    (* Printf.printf "%s\n" (string_of_sig prog_sig); *)
-    tdata_ref := { !tdata_ref with
-      signature = prog_sig @ !tdata_ref.signature
-    };
+    (* Update per-declaration and per-translation records. *)
+    ddata.matches <- ddata.matches + 1;
+    ddata.match_progs <- prog_sig @ ddata.match_progs;
+    tdata.signature <- prog_sig @ tdata.signature;
+    tdata.context <- ctx_add (Some prog_name, prog_ty, atts_init) tdata.context;
 
     (* Make correct indices for bound variables within match rules to be exported. *)
     let bounds = List.map (fun (x,_,_) ->
@@ -217,22 +203,25 @@ let eo_decl_attr ctx bvs (att : attr) =
 let base_cmd_cc (cmd : base_command) : cc_command list =
   match cmd with
   | Assert trm ->
-    let aname = "assert_" ^ string_of_int(!tdata_ref.asserts + 1) in
-    ddata_ref := { !ddata_ref with decl_name = aname };
-    tdata_ref := { !tdata_ref with asserts = !tdata_ref.asserts + 1 };
-    let typ = appvar "Proof" [eo_cc_term [] [] trm] in
+    let aname = "assert_" ^ string_of_int(tdata.asserts + 1) in
+    let typ = appvar "Proof" [eo_cc_term ctx_init [] trm] in
 
-    [ Const (aname, typ, None) ]
+    ddata.name <- aname;
+    tdata.asserts <- tdata.asserts + 1;
+    tdata.context <- ctx_add (Some aname, typ, atts_init) tdata.context;
+
+    [ Const (aname, typ) ]
 
   | DeclareConst (str, typ, atts) ->
     let
-      typ' = eo_cc_term [] [] typ and
+      typ' = eo_cc_term ctx_init [] typ and
       att_opt =
         match atts with
         | [] -> None
-        | att::[] -> Some (eo_decl_attr [] [] att)
+        | att::[] -> Some (eo_decl_attr ctx_init [] att)
         | _ -> failwith "More than one declaration attribute."
     in
+    let param = (Some str, typ', {atts_init with apply = att_opt }) in
 
     let assoc_rules =
       match att_opt with
@@ -240,28 +229,33 @@ let base_cmd_cc (cmd : base_command) : cc_command list =
         (* Gather all program-schema with right-assoc-nil attribute. *)
         let schema_cs = List.filter_map (fun (str, rs) ->
             if str = "right-assoc-nil" then Some rs else None
-          ) !tdata_ref.rschema
+          ) tdata.rschema
         in
-          List.map (fun (ctx, rs) ->
-            mvar_count := 0;
-            let (cons, mvar_ctx) =
-              elaborate_var (!tdata_ref.signature) [mk_param str typ'] str
-            in
-              Rule (ctx @ mvar_ctx,
-                inst_schema rs [("#cons", cons); ("#nil", nil)])
+          List.map (fun (params, rs) ->
+            let ctx' = ctx_add (mk_param str typ') tdata.context in
+            let (cons, mctx) = elaborate_term ctx' (Var str) in
+            let params' = IntMap.fold (fun idx trm acc ->
+              (Some (string_of_int idx), trm, atts_init)::acc) mctx params in
+            Rule (params', inst_schema rs [("#cons", cons); ("#nil", nil)])
           ) schema_cs
       | _ -> []
     in
-      [ Const (str, typ', att_opt) ] @ assoc_rules
+      tdata.context <- ctx_add param tdata.context;
+      [ Const (str, typ') ] @ assoc_rules
 
   | DefineConst (str, trm) ->
-    (* TODO. infer type here *)
-    let trm' = eo_cc_term [] [] trm in
-    [ Const (str, trm', None) ]
+    let trm' = eo_cc_term ctx_init [] trm in
+    let typ = infer tdata.context trm' in
+    let param = (Some str, typ, {atts_init with definition = Some trm'}) in
+
+    tdata.context <- ctx_add param tdata.context;
+
+    [ Defn (str, typ, trm') ]
 
   | DeclareType (str, tys) ->
-    let typ' = eo_arrow_cc [] [] (tys @ [Symbol "Type"]) in
-    [ Const (str, typ', None) ]
+    let typ' = eo_arrow_cc ctx_init [] (tys @ [Symbol "Type"]) in
+    tdata.context <- ctx_add (Some str, typ', atts_init) tdata.context;
+    [ Const (str, typ') ]
 
   | DefineType _ -> failwith "DefineType"
   | DeclareFun _ -> failwith "DeclareFun"
@@ -284,12 +278,16 @@ let eunoia_cmd_cc (cmd : eunoia_command) =
         let v' = eo_var_cc ctx bvs v in
         Bind (Lambda, v', eo_lambda_cc ctx (v'::bvs) vs' body)
     in
-    let trm' = eo_lambda_cc [] [] vs trm in
-    (* infer type here *)
-    [ Defn (str, infer (!tdata_ref.signature) [] [] trm', trm') ]
+    let trm' = eo_lambda_cc tdata.context [] vs trm in
+    let typ = infer tdata.context trm' in
+    let param = (Some str, typ, { atts_init with definition = Some trm' }) in
+    tdata.context <- ctx_add param tdata.context;
+
+    [ Defn (str, typ, trm') ]
 
   | DeclareRule (str, ps, rspec) ->
-    let ctx = List.map (eo_var_cc [] []) ps in
+    let params = List.map (eo_var_cc ctx_init []) ps in
+    let ctx = List.fold_left (fun acc p -> ctx_add p acc) ctx_init params in
     let concl_bool = eo_cc_term ctx [] rspec.conclusion in
     let concl = appvar "Proof" [concl_bool] in
 
@@ -325,10 +323,10 @@ let eunoia_cmd_cc (cmd : eunoia_command) =
       rspec.arguments
     in
 
-    (* step 1. create type signature and rewrite rule for auxillary.*)
+  (* step 1. create type signature and rewrite rule for auxillary.*)
     (* calculate type of each pattern under current signature and context.*)
-    let arg_tys = List.map
-      (infer (!tdata_ref.signature) ctx []) arg_ptrns in
+    let glob_ctx = ctx_join ctx tdata.context in
+    let arg_tys = List.map (infer glob_ctx) arg_ptrns in
 
     let aux_params = ParamSet.to_list
       (ParamSet.diff
@@ -343,29 +341,26 @@ let eunoia_cmd_cc (cmd : eunoia_command) =
       )
     in
     let aux_typ = close_term ctx aux_typ_body in
-
     let aux_param_vars = List.map param_var aux_params in
+
+    tdata.context <- ctx_add (mk_param aux_str aux_typ) tdata.context;
+
     (* elaborate lhs/rhs with explicits where needed.*)
-    let ctx' = (mk_param aux_str aux_typ) :: ctx in
+    let glob_ctx' = ctx_add (mk_param aux_str aux_typ) glob_ctx in
     let rw_rules = map_cc_rule
-      (infer_term (!tdata_ref.signature) ctx' [])
+      (infer_term glob_ctx' [])
       [(appvar aux_str (arg_ptrns @ aux_param_vars), concl_bool)]
     in
-    let aux_decl = [ Prog (aux_str, aux_typ); Rule (ctx, rw_rules) ] in
-    (* step 2. create signature for main inference rule. *)
-      (* create parameters for each arg-pattern *)
+    let aux_decl = [
+      Prog (aux_str, aux_typ);
+      Rule (params, rw_rules) ]
+    in
+
+  (* step 2. create signature for main inference rule. *)
     let arg_params = List.mapi (fun i ty ->
       mk_param ("x" ^ string_of_int i) ty
     ) arg_tys
     in
-      (* let str =
-        if i < List.length arg_tys then
-          "x" ^ string_of_int i
-        else if i < List.length arg_tys + List.length prop_tys - 1 then
-          "p" ^ string_of_int (i - List.length arg_tys)
-        else
-          "q"
-      in *)
 
     (* eta-expand auxillary function.*)
     let aux_vars = List.map param_var (arg_params @ aux_params) in
@@ -379,25 +374,25 @@ let eunoia_cmd_cc (cmd : eunoia_command) =
     in
     let rule_typ = close_term ctx rule_typ_raw in
 
-    aux_decl @ [ Const (str, rule_typ, None) ]
+
+    aux_decl @ [ Const (str, rule_typ) ]
 
   | DeclareConsts (lcat, eo_typ) ->
-    [ LitTy (lcat, eo_cc_term [] [] eo_typ)]
+    [ LitTy (lcat, eo_cc_term ctx_init [] eo_typ)]
 
   | DeclareParamConst _ -> failwith "undefined"
   | DeclareOracleFun _ -> failwith "undefined"
 
   | Include ip ->
-    let ip' = normalize_path ip (!tdata_ref.filepath) in
-    let fp' = normalize_path (!tdata_ref.filepath) "" in
+    let ip' = normalize_path ip (tdata.filepath) in
+    let fp' = normalize_path (tdata.filepath) "" in
     let deps' =
       StrMap.update fp' (function
       | Some paths -> Some (StrSet.add ip'  paths)
       | None -> Some (StrSet.singleton ip')
-      ) !tdata_ref.deps
+      ) tdata.deps
     in
-      tdata_ref := { !tdata_ref with deps = deps'};
-    []
+      tdata.deps <- deps'; []
 
   | Program (str, att_str_opt, eo_ps, dom_tys, ran_ty, eo_rs) ->
     let params = List.map (eo_var_cc [] []) eo_ps in
