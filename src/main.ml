@@ -9,7 +9,13 @@ let debug_encode = ref false
 
 let string_of_strset str =
     StrSet.fold (fun str acc -> Printf.sprintf "%s, %s" str acc) str ""
-let string_of_strmap = StrMap.iter (fun str x -> Printf.printf "%s ~~> {%s}\n" str (string_of_strset x))
+let string_of_strmap = StrMap.iter
+  (fun str x -> Printf.printf "%s ~~> {%s}\n" str (string_of_strset x))
+
+let show (str : string) : string =
+  match StrMap.find_opt str (tdata.context) with
+  | Some param -> Printf.sprintf "%s" (string_of_param [] param)
+  | None -> Printf.sprintf "Symbol %s not found in context." str
 
 let eo_files = [
   "cpc-less/CompOp.eo";
@@ -24,11 +30,6 @@ let eo_files = [
   (* "cpc-less/rules/Uf.eo"; *)
   (* "cpc-less/rules/Arith.eo"; *)
 ]
-
-let show (str : string) : string =
-  match lookup_cmd_opt (!tdata_ref.signature) str with
-  | Some cmd -> Printf.sprintf "%s" (string_of_cmd cmd)
-  | None -> Printf.sprintf "Symbol %s not found in signature" str
 
 let find_eo_files (dir : string) : string list =
   let rec aux (dir : string) (acc : string list) =
@@ -71,26 +72,11 @@ let parse_directory (dir : string) : eo_library =
   Printf.printf "Found %d EO files.\n" (List.length files);
   List.map (fun file -> (file, parse_file file)) files
 *)
-let write_line ch str = output_string ch str; output_char ch '\n'
-let write_lp_cmd ch cmd = write_line ch (string_of_lp_cmd cmd)
+let write_line ch str =
+  if str = "" then () else
+  output_string ch str; output_char ch '\n'
 
-let proc_eo_cmd (cmd : eo_command)  =
-  begin
-    ddata_ref := ddata_init;
-    let cs = eo_cc cmd in
-    if cs <> [] then
-      List.fold_right (fun cmd acc ->
-        tdata_ref := { !tdata_ref with signature = cmd :: !tdata_ref.signature };
-        let lp_cmd = cc_lp cmd in
-        if !debug_encode then
-          begin
-            Printf.printf "Encoding command...\n%s\n" (string_of_cmd cmd);
-            Printf.printf "Done!\n%s\n\n" (string_of_lp_cmd lp_cmd);
-          end;
-        (lp_cmd :: acc)
-      ) (!ddata_ref.match_progs @ cs) []
-    else []
-  end
+let write_lp_cmd ch cmd = write_line ch (string_of_lp_cmd cmd)
 
 let generic_imports =
   [
@@ -101,7 +87,7 @@ let generic_imports =
 
 let lp_imports (fp : string) : string =
   let rec trcl str : StrSet.t =
-    match StrMap.find_opt str (!tdata_ref.deps) with
+    match StrMap.find_opt str (tdata.deps) with
     | Some ips ->
         StrSet.fold (fun str x ->
           StrSet.add str (StrSet.union (trcl str) x)
@@ -109,8 +95,7 @@ let lp_imports (fp : string) : string =
     | None -> StrSet.empty
   in
   let eo_trcl = StrSet.map (fun str -> "eo2lp." ^ str) (trcl fp) in
-  if StrSet.is_empty eo_trcl then
-    ""
+  if StrSet.is_empty eo_trcl then ""
   else
     let import_str = String.concat " " (StrSet.to_list eo_trcl) in
     Printf.sprintf "require open %s;" import_str
@@ -122,35 +107,41 @@ let rec create_parent_dir fn =
     Sys.mkdir parent_dir 0o755
   end
 
-let proc_eo_file (fp : string) =
-  begin
-    Printf.printf "Parsing file %s... " fp;
-
-    let idx = String.index fp '/' in
-    let fp' = String.sub fp
-      (idx + 1) (String.length fp - idx - 1)
-    in
-    tdata_ref := { !tdata_ref with filepath = fp' };
-    let eo_cmds = parse_file fp in
-    let lp_cmds = List.concat_map proc_eo_cmd eo_cmds in
-    let lp_fp = Filename.concat "lp" (Filename.chop_extension fp') ^ ".lp" in
-
+let write_lp_file (eo_fp : string) (cmds : lp_cmd list) : unit =
+    let import_str = lp_imports (normalize_path eo_fp "") in
+    let lp_fp = Filename.concat "lp" (Filename.chop_extension eo_fp) ^ ".lp" in
     Printf.printf "Begin writing file: %s\n" lp_fp;
     let ch = create_parent_dir lp_fp; open_out lp_fp in
     begin
-      write_line ch (Printf.sprintf "// Begin translation of: %s" fp);
+      write_line ch (Printf.sprintf "// Begin translation of: %s" eo_fp);
       List.iter (write_line ch) generic_imports;
-      write_line ch (lp_imports (normalize_path fp' ""));
-      List.iter (write_lp_cmd ch) lp_cmds;
-      Printf.printf "Done!\n";
+      write_line ch import_str; output_char ch '\n';
+      List.iter (write_lp_cmd ch) cmds;
+      Printf.printf "Done!\n\n";
       output_char ch '\n';
       close_out ch;
     end
+
+let proc_eo_file (fp : string) =
+  begin
+    let idx = String.index fp '/' in
+    let eo_fp = String.sub fp (idx + 1) (String.length fp - idx - 1) in
+    tdata.filepath <- eo_fp;
+
+    Printf.printf "Parsing file %s...\n" fp;
+    let eo_cmds = parse_file fp in
+
+    Printf.printf "Translating commands...\n";
+    let cc_cmds = List.concat_map eo_cc eo_cmds in
+
+    Printf.printf "Encoding commands...\n";
+    let lp_cmds = List.map cc_lp cc_cmds in
+    write_lp_file eo_fp lp_cmds;
   end
 
 let main : unit =
   begin
-    tdata_ref := tdata_init;
+    init_tdata;
     List.iter (proc_eo_file) eo_files;
   end
 (* let lp_builtin = List.concat_map (translate_toplevel thy_init) cpc_builtin

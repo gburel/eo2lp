@@ -49,8 +49,6 @@ type cc_command =
   | Rule of param list * cc_rule
   | LitTy of lit_category * cc_term
 
-type cc_signature = cc_command list
-
 (* ------ Utilities ------ *)
 let atts_init = {
   definition = None;
@@ -76,18 +74,25 @@ let ctx_init = StrMap.empty
 let ctx_join (c1 : cc_context) (c2 : cc_context) : cc_context =
   StrMap.union (fun _ p _ -> Some p) c1 c2
 
-let ctx_add ((str_opt, _, _) as p) ctx =
+let mk_param (str : string) (ty : cc_term) : param =
+  (Some str, ty, atts_init)
+
+let ctx_add str typ ctx = StrMap.add str (mk_param str typ) ctx
+
+let ctx_add_param ((str_opt, _, _) as p) ctx =
   match str_opt with
   | Some str -> StrMap.add str p ctx
   | None -> failwith "Cannot add nameless parameter to context."
+
+let ctx_append_param params ctx =
+  List.fold_left (fun acc p -> ctx_add_param p acc) ctx params
 
 (* let param_var ((_,_) : param) =
   match x_opt with
   | Some x -> Var x
   | None -> failwith "Cannot create variable from nameless parameter." *)
 
-let mk_param (str : string) (ty : cc_term) : param =
-  (Some str, ty, atts_init)
+
 
 let is_binder bb trm = match trm with
   | Bind (bb', _, _) -> bb = bb'

@@ -1,3 +1,5 @@
+(include "../theories/Builtin.lp")
+
 (declare-rule bool-double-not-elim ((t1 Bool))
   :args (t1)
   :conclusion (= (not (not t1)) t1)

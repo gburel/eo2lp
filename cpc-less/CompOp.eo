@@ -1,7 +1,10 @@
 (declare-const _ (-> (! Type :var S :implicit) (! Type :var T :implicit) (-> S T) S T))
 
+(declare-type Bool ())
 (declare-const true Bool)
 (declare-const false Bool)
+
+(declare-const Proof (-> Bool Type))
 
 (declare-type eo::Int ())
 (declare-const eo::0 eo::Int)

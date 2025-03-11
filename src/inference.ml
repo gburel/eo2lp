@@ -19,8 +19,9 @@ let elaborate_term (ctx : cc_context) (trm : cc_term) : (cc_term * mvar_context)
   let rec gen_mvars (trm : cc_term) : (int * cc_term) list =
     match trm with
     | Bind (Pi, (_, ty, atts), trm') when atts.implicit ->
-      let idx = IntMap.cardinal !mctx
-      in ((idx + 1),ty) :: (gen_mvars trm')
+      let idx = IntMap.cardinal !mctx in
+      mctx := IntMap.add idx ty !mctx;
+      (idx,ty) :: (gen_mvars trm')
     | _ -> []
   in
 
@@ -32,7 +33,6 @@ let elaborate_term (ctx : cc_context) (trm : cc_term) : (cc_term * mvar_context)
     (* Elaborate free variable by possibly generating metavariables. *)
     | Var str ->
         let mvars = gen_mvars (lookup_type ctx str) in
-        mctx := IntMap.add_seq (List.to_seq mvars) !mctx;
         appvar str (List.map (fun (idx,_) -> Meta idx) mvars)
     | App (e1,e2) -> App (
         elab_vars ctx bvs e1,
@@ -300,15 +300,15 @@ let infer ctx trm =
     Printf.printf "Found type %s with constraints %s\n"
     (string_of_term typ) (string_of_equations eqs);
 
-  let mctx = unify ctx (List.rev (EqSet.to_list eqs)) IntMap.empty in
+  let mctx = unify ctx (EqSet.to_list eqs) IntMap.empty in
   if !debug_inference then
     Printf.printf "Found unifier %s\n" (string_of_mctx mctx);
 
   app_mctx mctx typ false
 
-let rec expand_defs (defs : (string * cc_term) list) (trm : cc_term) : cc_term =
+let rec expand_defs (defs : cc_term StrMap.t) (trm : cc_term) : cc_term =
   map_cc_term (fun _ str ->
-    match List.assoc_opt str defs with
+    match StrMap.find_opt str defs with
     | Some trm -> expand_defs defs trm
     | None -> Var str
   ) [] trm
@@ -329,7 +329,7 @@ let infer_term ctx defs trm =
     Printf.printf "Found type %s with constraints %s\n"
     (string_of_term typ) (string_of_equations eqs');
 
-  let mctx = unify ctx (List.rev (EqSet.to_list eqs')) IntMap.empty in
+  let mctx = unify ctx (EqSet.to_list eqs') IntMap.empty in
   if !debug_inference then
     Printf.printf "Found unifier %s\n" (string_of_mctx mctx);
 
