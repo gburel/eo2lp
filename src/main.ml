@@ -25,10 +25,13 @@ let eo_files = [
   "cpc-less/rules/Builtin.eo";
   "cpc-less/rules/Booleans-less.eo";
   "cpc-less/rules/Rewrites-less.eo";
-  (* "cpc-less/rules/Uf.eo";  *)
-  (* "test/rodin/smt1468783596909311386.smt2.prf"; *)
+  "cpc-less/rules/Uf.eo";
   (* "cpc-less/rules/Uf.eo"; *)
   (* "cpc-less/rules/Arith.eo"; *)
+]
+
+let proof_files = [
+  (* "test/rodin/smt1468783596909311386.smt2.prf"; *)
 ]
 
 let find_eo_files (dir : string) : string list =
@@ -78,11 +81,10 @@ let write_line ch str =
 
 let write_lp_cmd ch cmd = write_line ch (string_of_lp_cmd cmd)
 
-let generic_imports =
+let thyU_imports =
   [
     "require open Logic.U.Set Logic.U.Prop;";
     "require open Logic.U.Arrow Logic.U.DepArrow;";
-    "require open eo2lp.Prelude;";
   ]
 
 let lp_imports (fp : string) : string =
@@ -114,7 +116,9 @@ let write_lp_file (eo_fp : string) (cmds : lp_cmd list) : unit =
     let ch = create_parent_dir lp_fp; open_out lp_fp in
     begin
       write_line ch (Printf.sprintf "// Begin translation of: %s" eo_fp);
-      List.iter (write_line ch) generic_imports;
+      List.iter (write_line ch) thyU_imports;
+      if basename lp_fp <> "CompOp.lp" then
+        write_line ch "require open eo2lp.CompOp;";
       write_line ch import_str; output_char ch '\n';
       List.iter (write_lp_cmd ch) cmds;
       Printf.printf "Done!\n\n";
@@ -128,21 +132,34 @@ let proc_eo_file (fp : string) =
     let eo_fp = String.sub fp (idx + 1) (String.length fp - idx - 1) in
     tdata.filepath <- eo_fp;
 
-    Printf.printf "Parsing file %s...\n" fp;
+    let t = Sys.time () in
+    Printf.printf "Parsing file %s... " fp;
     let eo_cmds = parse_file fp in
+    let t' = Sys.time () in
+    Printf.printf "%fms\n" (Float.mul (Float.sub t' t) 1000.0);
 
-    Printf.printf "Translating commands...\n";
+    let t = Sys.time () in
+    Printf.printf "Translating %d commands... " (List.length eo_cmds);
     let cc_cmds = List.concat_map eo_cc eo_cmds in
+    let t' = Sys.time () in
+    Printf.printf "%fms\n" (Float.mul (Float.sub t' t) 1000.0);
 
-    Printf.printf "Encoding commands...\n";
+    let t = Sys.time () in
+    Printf.printf "Encoding %d commands... " (List.length cc_cmds);
     let lp_cmds = List.map cc_lp cc_cmds in
+    let t' = Sys.time () in
+    Printf.printf "%fms\n" (Float.mul (Float.sub t' t) 1000.0);
+
     write_lp_file eo_fp lp_cmds;
   end
 
 let main : unit =
   begin
+    let t = Sys.time () in
     init_tdata;
     List.iter (proc_eo_file) eo_files;
+    let t' = Sys.time () in
+    Printf.printf "Total processing time: %fms\n" (Float.mul (Float.sub t' t) 1000.0);
   end
 (* let lp_builtin = List.concat_map (translate_toplevel thy_init) cpc_builtin
 let lp_builtin_str = List.map (show_lp_command) lp_builtin  *)

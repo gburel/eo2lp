@@ -1,5 +1,5 @@
 (include "../theories/Builtin.eo")
-(include "../programs/Nary.eo")
+(include "../programs/Nary-less.eo")
 
 ;;;;; ProofRule::REFL
 
@@ -59,7 +59,7 @@
 ;   An equality between the left hand side of the first equality
 ;   and the right hand side of the last equality, assuming that the right hand
 ;   side of each equality matches the left hand side of the one that follows it.
-(declare-rule trans ((T Type) (U Type) (E Bool) (f (-> T U)))
+(declare-rule trans ((T Type) (U Type) (E Bool))
     :premise-list E and
     :conclusion
         (eo::match ((t1 U) (t2 U) (tail Bool :list))
@@ -114,11 +114,15 @@
 ; return: >
 ;   The right hand side of the equality proven by nary_cong for f and
 ;   the given premises E.
-(program-schema :right-assoc-nil
-  $mk_nary_cong_rhs ((U Type) (f (-> U U U)) (s1 U) (s2 U) (t U :list) (tail Bool :list) (nil U))
-    (U Bool) U
+(program-schema :right-assoc-nil $mk_nary_cong_rhs
     (
-        (($mk_nary_cong_rhs (f s1 t) (and (= s1 s2) tail))  (eo::cons f s2 ($mk_nary_cong_rhs t tail)))
+      (T1 Type) (T2 Type) (cons (-> T1 T1 T2)) (nil T2)
+      (s1 T1) (s2 T1) (t T2 :list) (tail Bool :list)
+    )
+    (T2 Bool) T2
+    (
+        (($mk_nary_cong_rhs (cons s1 t) (and (= s1 s2) tail))
+          (eo::cons cons s2 ($mk_nary_cong_rhs t tail)))
         (($mk_nary_cong_rhs nil true)                       nil)
     )
 )

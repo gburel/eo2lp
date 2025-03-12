@@ -2,9 +2,16 @@ open Ast
 open Ast_cc
 open Inference
 
+module Rule = struct
+  type t = param list * cc_rule
+  let compare = compare
+end
+
+module RuleSet = Set.Make(Rule)
+
 type translation_data = {
   mutable asserts : int;
-  mutable rschema : (string * (param list * (cc_term * cc_term) list)) list;
+  mutable prog_schema : RuleSet.t StrMap.t;
   mutable context : cc_context;
   mutable filepath : string;
   mutable deps : StrSet.t StrMap.t;
@@ -32,7 +39,7 @@ let eo_typeof_typ =
 let tdata_default =
    {
     asserts = 0;
-    rschema = [];
+    prog_schema = StrMap.empty;
     context = StrMap.of_list [
       ("eo::typeof", (Some "eo::typeof", eo_typeof_typ, atts_init)) ];
     filepath = "";
@@ -43,18 +50,16 @@ let tdata = tdata_default
 let init_tdata =
   begin
     tdata.asserts <- tdata_default.asserts;
-    tdata.rschema <- tdata_default.rschema;
+    tdata.prog_schema <- tdata_default.prog_schema;
     tdata.context <- tdata_default.context;
     tdata.filepath <- tdata_default.filepath;
     tdata.deps <- tdata_default.deps;
   end
 
 let glob_ctx_add str typ : unit =
-  (* Printf.printf "\nctx <- %s : %s\n" str (string_of_term typ); *)
   tdata.context <- ctx_add str typ tdata.context
 
 let glob_ctx_add_param p : unit =
-  (* Printf.printf "\nctx <- %s\n" (string_of_param [] p); *)
   tdata.context <- ctx_add_param p tdata.context
 
 (*
@@ -221,6 +226,40 @@ let eo_decl_attr ctx bvs (att : attr) =
   | ("binder",    Some trm) -> Binder (eo_cc_term ctx bvs trm)
   | _ -> failwith "Unknown declaration attribute."
 
+let att_stem att = List.hd (String.split_on_char ' ' (string_of_attribute att))
+
+let inst_schema prog_map att_str (cons,nil,t1,t2)  =
+  let subst = StrMap.of_list [
+    ("cons", cons); ("nil", nil); ("T1", t1); ("T2", t2) ] in
+  let schema_set =
+    match StrMap.find_opt att_str prog_map with
+    | Some x -> x
+    | None -> RuleSet.empty
+  in
+  RuleSet.fold (fun (ps, rws) acc ->
+    subst_rule subst ps rws :: acc) schema_set []
+
+let cons_tys typ =
+  match typ with
+  | Bind (Pi, (_,ty1,_),
+      Bind (Pi, (_,ty2,_), _))
+    -> (ty1, ty2)
+  | _ -> failwith (Printf.sprintf "Term %s doesn't have 2 leading Pi's." (string_of_term typ))
+
+(* for a given direction, return list of cons and nil operators in a context *)
+let sig_assocs (ctx : cc_context) (att_str : string) =
+  List.filter_map (fun (str,(_,ty,atts)) ->
+    Option.bind atts.apply (function
+      | RightAssocNil nil when att_str = ":right-assoc-nil" ->
+        let (t1,t2) = cons_tys ty in
+        Some (Var str, nil, t1, t2)
+      | LeftAssocNil nil when att_str = ":left-assoc-nil" ->
+        let (t1,t2) = cons_tys ty in
+        Some (Var str, nil, t1, t2)
+      | _ -> None
+    )
+  ) (StrMap.to_list ctx)
+
 
 let base_cmd_cc (cmd : base_command) : cc_command list =
   match cmd with
@@ -235,33 +274,24 @@ let base_cmd_cc (cmd : base_command) : cc_command list =
     [ Const (aname, typ) ]
 
   | DeclareConst (str, typ, atts) ->
-    let typ' = eo_cc_term ctx_init [] typ
-    and att_opt =
+    let typ' = eo_cc_term ctx_init [] typ in
+    let att_opt =
       match atts with
       | [] -> None
       | att::[] -> Some (eo_decl_attr ctx_init [] att)
       | _ -> failwith "More than one declaration attribute."
     in
 
-    let assoc_rules =
+    let rw_insts =
       match att_opt with
-      | Some (RightAssocNil nil) ->
-        (* Gather all program-schema with right-assoc-nil attribute. *)
-        let schema_cs = List.filter_map (fun (str, rs) ->
-            if str = "right-assoc-nil" then Some rs else None
-          ) tdata.rschema
-        in
-          List.map (fun (params, rs) ->
-            let ctx' = ctx_add str typ' tdata.context in
-            let (cons, mctx) = elaborate_term ctx' (Var str) in
-            let params' = IntMap.fold (fun idx trm acc ->
-              (Some (string_of_int idx), trm, atts_init)::acc) mctx params in
-            Rule (params', inst_schema rs [("#cons", cons); ("#nil", nil)])
-          ) schema_cs
+      | Some ((RightAssocNil nil|LeftAssocNil nil) as att) ->
+        let (ty1,ty2) = cons_tys typ' in
+        inst_schema tdata.prog_schema (att_stem att) (Var str, nil, ty1, ty2)
       | _ -> []
     in
-      glob_ctx_add_param (Some str, typ', { atts_init with apply = att_opt });
-      ([ Const (str, typ') ] @ assoc_rules)
+
+    glob_ctx_add_param (Some str, typ', { atts_init with apply = att_opt });
+    Const (str, typ') :: rw_insts
 
   | DefineConst (str, trm) ->
     let trm' = eo_cc_term ctx_init [] trm in
@@ -418,20 +448,25 @@ let eunoia_cmd_cc (cmd : eunoia_command) : cc_command list =
     glob_ctx_add str prog_ty;
 
     (* infer implicits for rules *)
-    let rw_rules = List.map (eo_cc_rule ctx []) eo_rw_rules in
-    let glob_ctx = ctx_join ctx tdata.context in
-    let rw_rules' = map_cc_rule (infer_term glob_ctx StrMap.empty) rw_rules in
+    let rws = List.map (eo_cc_rule ctx []) eo_rw_rules in
 
     begin match att_str_opt with
     (* if it's a program schema, then add skeleton to tdata.*)
-    | Some att_str ->
-      tdata.rschema <- (att_str, (params, rw_rules')) :: tdata.rschema;
-      [ Prog (str, prog_ty) ]
+    | Some astr ->
+      let att_str = ":" ^ astr in
+      tdata.prog_schema <- StrMap.update att_str (function
+        | Some x -> Some (RuleSet.add (params, rws) x)
+        | None -> Some (RuleSet.singleton (params, rws))
+      ) tdata.prog_schema;
+      (* also, instantiate for all constants with attribute given by `att_str`*)
+      let att_consts = sig_assocs tdata.context att_str in
+      let prog_insts = List.concat_map
+        (inst_schema tdata.prog_schema att_str) att_consts in
 
-    | None ->
-      [ Prog (str, prog_ty); Rule (params, rw_rules') ]
+      Prog (str, prog_ty) :: prog_insts
+
+    | None -> [ Prog (str, prog_ty); Rule (params, rws) ]
     end
-
   | Reference _ -> failwith "undefined"
 
 let proof_prop (trm : cc_term) : cc_term =
@@ -444,8 +479,7 @@ let proof_prop (trm : cc_term) : cc_term =
         "Not a proof term: (%s : %s)"
         (string_of_term trm)(string_of_term typ)
       )
-    end
-  | _ -> failwith (Printf.sprintf "Not a variable: %s" (string_of_term trm))
+    end  | _ -> failwith (Printf.sprintf "Not a variable: %s" (string_of_term trm))
 
 let proof_cmd_cc (cmd : proof_command) : cc_command list =
   match cmd with

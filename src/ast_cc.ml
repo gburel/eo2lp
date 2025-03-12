@@ -3,7 +3,7 @@ open Ast
 module StrMap = Map.Make(String)
 
 (* ----- Datatypes. ------ *)
-type universe = TYPE | KIND (* PROP deprecated, just use Proof : Bool → TYPE. *)
+type universe = TYPE | KIND
 [@@deriving show]
 
 type cc_binder =
@@ -11,8 +11,6 @@ type cc_binder =
   | Lambda
   | Pi
 [@@deriving show]
-
-(* type assoc_dir = Left | Right *)
 
 type cc_term =
   | Univ of universe
@@ -133,17 +131,6 @@ let string_of_lcat lcat =
 let lookup_lit (ctx : cc_context) (lcat : lit_category) =
   StrMap.find_opt (string_of_lcat lcat) ctx
 
-type assoc_dir = Left | Right
-
-(* for a given direction, return list of cons and nil operators in a context *)
-let sig_assocs (ctx : cc_context) (dir : assoc_dir) =
-  StrMap.filter_map (fun str (_,_,atts) ->
-    Option.map (function
-      | RightAssocNil nil -> if dir = Right then Some (Var str, nil) else None
-      | LeftAssocNil nil -> if dir = Left then Some (Var str, nil) else None
-    ) atts.apply
-  ) ctx
-
 let app : cc_term -> cc_term list -> cc_term =
   List.fold_left (fun acc y -> App (acc, y))
 
@@ -257,15 +244,22 @@ let rec map_cc_term
 let map_cc_rule (f : cc_term -> cc_term) (rs : cc_rule) : cc_rule =
   List.map (fun (l,r) -> (f l, f r)) rs
 
-let subst_vars vs trm =
-  map_cc_term (fun _ str ->
-    match List.find_opt (fun (x,_) -> x = str) vs with
-    | Some (_,t) -> t
-    | None -> Var str
-  ) [] trm
+let subst_trm sub trm =
+    map_cc_term (fun _ str ->
+      match StrMap.find_opt str sub with
+      | Some t -> t
+      | None -> Var str
+    ) [] trm
 
-let inst_schema rs (sub : (string * cc_term) list) =
-  map_cc_rule (subst_vars sub) rs
+let subst_rule (sub : cc_term StrMap.t) (params : param list) (rw : cc_rule) =
+  (* Remove domain of substituion from parameter list, apply substituion in types. *)
+  let params' =
+    List.filter_map (fun (str_opt, typ, atts) ->
+      match Option.bind str_opt (fun str -> StrMap.find_opt str sub) with
+      | Some _ -> None
+      | None -> Some (str_opt, subst_trm sub typ, atts)
+    ) params in
+  Rule (params', map_cc_rule (subst_trm sub) rw)
 
 let mk_bounds (xs : string option list) (trm : cc_term) =
   map_cc_term (fun bvs str ->

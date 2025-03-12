@@ -127,20 +127,24 @@ let cc_lp_binder (bb : cc_binder) =
   | Lambda -> Lambda
   | Let -> Let
 
+module CharSet = Set.Make(Char)
+
+(* Define the forbidden characters once at module level *)
+let forbidden_chars =
+  CharSet.of_list ['\t';'\r';'\n';':';',';';';'`';'(';')';'{';'}';'[';']';'\\';'"';'.';'@';'$';'|';'?';'/']
+
+let is_valid_regular s =
+  if s = "/" then true
+  else if s = "" then false
+  else String.for_all (fun c -> not (CharSet.mem c forbidden_chars)) s
+
 let cc_lp_iden (str_opt : string option) : string =
-  begin match str_opt with
+  match str_opt with
   | None -> "_"
   | Some "_" -> "{|_|}"
-  | Some str ->
-    let forbidden = "\t\r\n :,;`(){}[]\".@$|?/" in
-    let is_valid_regular s =
-      if s = "/" then true
-      else if s = "" then false
-      else
-        String.for_all (fun c -> not (String.contains forbidden c)) s
-    in
-      if is_valid_regular str then str else (Printf.sprintf "{|%s|}" str)
-  end
+  | Some str -> if is_valid_regular str then str else "{|" ^ str ^ "|}"
+
+
 
 let encode_univ univ =
   match univ with

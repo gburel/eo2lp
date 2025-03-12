@@ -242,14 +242,22 @@ let rec unify (ctx : cc_context) (eqs : Equation.t list) (mctx : mvar_context)
         if occurs_check m u' then
           failwith "Occurs check failure"
         else
-          let mctx' = IntMap.add m u' mctx in
+          let mctx' =  IntMap.map (fun trm ->
+            app_mctx (IntMap.singleton m u') trm false
+            ) mctx
+          in
+          let mctx' = IntMap.add m u' mctx' in
           unify ctx (mctx_cs mctx' js) mctx'
 
     | (_, Meta m) ->
         if occurs_check m t' then
           failwith "Occurs check failure"
         else
-          let mctx' = IntMap.add m t' mctx in
+          let mctx' =  IntMap.map (fun trm ->
+            app_mctx (IntMap.singleton m t') trm false
+            ) mctx
+          in
+          let mctx' = IntMap.add m t' mctx' in
           unify ctx (mctx_cs mctx' js) mctx'
 
     | (App(f1, a1), App(f2, a2)) ->
