@@ -25,9 +25,10 @@ let elaborate_term (ctx : cc_context) (trm : cc_term) : (cc_term * mvar_context)
     | _ -> []
   in
 
-  let rec elab_vars ctx bvs trm =
+  let rec elab_vars ctx bvs (trm : cc_term) =
     match trm with
     | (Univ _|Meta _|Literal _) -> trm
+    | Explicit t -> Explicit (elab_vars ctx bvs t)
     (* Elaborate bound variable by looking up index. Maybe don't do this here.*)
     | Bound i -> lookup_bvar bvs i
     (* Elaborate free variable by possibly generating metavariables. *)

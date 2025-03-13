@@ -153,7 +153,7 @@ and eo_match_cc ctx bvs ps trm rs =
 
     let params = List.map (eo_var_cc ctx []) ps in
     let ctx' = ctx_append_param params ctx in
-
+    let params' = List.map snd (StrMap.to_list ctx') in
     (* Infer types of lhs/rhs of first rule, wrt.
     locally-bound variables, and global constants. *)
     let rs' = List.map (eo_cc_rule ctx' bvs) rs in
@@ -179,7 +179,7 @@ and eo_match_cc ctx bvs ps trm rs =
     let prog_cmds =
       [
         Prog (prog_name, prog_ty);
-        Rule (params @ bound_params @ free_params, prog_rules)
+        Rule (params' @ bound_params @ free_params, prog_rules)
       ]
     in
 
@@ -348,6 +348,7 @@ let eunoia_cmd_cc (cmd : eunoia_command) : cc_command list =
           appvar "Proof" [eo_cc_term loc_ctx [] t]) ts
         in
           mk_pi_nameless prem_tys concl
+
       | Some (PremiseList (trm,op)) ->
         let prem_trm = eo_cc_term loc_ctx [] trm in
         let op_trm = eo_cc_term loc_ctx [] op in
@@ -396,17 +397,12 @@ let eunoia_cmd_cc (cmd : eunoia_command) : cc_command list =
     glob_ctx_add aux_str aux_typ;
 
     (* elaborate lhs/rhs with explicits where needed.*)
-    let glob_ctx' = ctx_add aux_str aux_typ glob_ctx in
-    let rw_rules = map_cc_rule
-      (infer_term glob_ctx' StrMap.empty)
-      [(appvar aux_str (arg_ptrns @ aux_param_vars), concl_bool)]
-    in
-    let aux_cmds = [ Prog (aux_str, aux_typ); Rule (params, rw_rules) ] in
+    let rws = [(appvar aux_str (arg_ptrns @ aux_param_vars), concl_bool)] in
+    let aux_cmds = [ Prog (aux_str, aux_typ); Rule (params, rws) ] in
 
   (* step 2. create signature for main inference rule. *)
     let arg_params = List.mapi (fun i ty ->
-      mk_param ("x" ^ string_of_int i) ty
-    ) arg_tys
+      mk_param ("x" ^ string_of_int i) ty) arg_tys
     in
 
     (* eta-expand auxillary function.*)

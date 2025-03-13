@@ -254,11 +254,14 @@ let cc_lp (cmd : cc_command) =
         Some (encode_type [] ty),
         None
       )
-  | Rule (params, rs) ->
+  | Rule (params, rws) ->
+    let ctx = ctx_append_param params Translation.tdata.context in
+    let infer = Inference.infer_term ctx StrMap.empty in
+    let rws' = map_cc_rule infer rws in
     let enc t = mk_ptrn_vars
       (List.map (fun (Some x,_,_) -> x) params) (encode_term [] t) in
     let encode_rule = (fun (lhs,rhs) -> (enc lhs, enc rhs)) in
-    Rule (List.map encode_rule rs)
+    Rule (List.map encode_rule rws')
 
 let cc_lp_debug cmd =
   Printf.printf "Encoding cc-command:\n%s\n" (string_of_cmd cmd);

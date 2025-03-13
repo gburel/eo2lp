@@ -17,19 +17,6 @@ let show (str : string) : string =
   | Some param -> Printf.sprintf "%s" (string_of_param [] param)
   | None -> Printf.sprintf "Symbol %s not found in context." str
 
-let eo_files = [
-  "cpc-less/CompOp.eo";
-  "cpc-less/programs/Utils-less.eo";
-  "cpc-less/programs/Nary-less.eo";
-  "cpc-less/theories/Builtin.eo";
-  "cpc-less/rules/Builtin.eo";
-  "cpc-less/rules/Booleans-less.eo";
-  "cpc-less/rules/Rewrites-less.eo";
-  "cpc-less/rules/Uf.eo";
-  (* "cpc-less/rules/Uf.eo"; *)
-  (* "cpc-less/rules/Arith.eo"; *)
-]
-
 let proof_files = [
   (* "test/rodin/smt1468783596909311386.smt2.prf"; *)
 ]
@@ -153,14 +140,31 @@ let proc_eo_file (fp : string) =
     write_lp_file eo_fp lp_cmds;
   end
 
-let main : unit =
+let proc_eo_library : unit =
+  let paths = [
+    "cpc-less/CompOp.eo";
+    "cpc-less/programs/Utils-less.eo";
+    "cpc-less/programs/Nary-less.eo";
+    "cpc-less/theories/Builtin.eo";
+    "cpc-less/rules/Builtin.eo";
+    "cpc-less/rules/Booleans-less.eo";
+    "cpc-less/rules/Rewrites-less.eo";
+    "cpc-less/rules/Uf.eo";
+    (* "cpc-less/rules/Uf.eo"; *)
+    (* "cpc-less/rules/Arith.eo"; *) ]
+  in
   begin
     let t = Sys.time () in
     init_tdata;
-    List.iter (proc_eo_file) eo_files;
+    List.iter (proc_eo_file) paths;
     let t' = Sys.time () in
     Printf.printf "Total processing time: %fms\n" (Float.mul (Float.sub t' t) 1000.0);
   end
+
+let main : unit = proc_eo_library
+
+
+
 (* let lp_builtin = List.concat_map (translate_toplevel thy_init) cpc_builtin
 let lp_builtin_str = List.map (show_lp_command) lp_builtin  *)
 (* Debugging: Print the results *)

@@ -3,6 +3,7 @@ test/
 hs/
 notes/
 
+.ocamlinit
 
 .zed/
 .vscode/
