@@ -1,7 +1,5 @@
 open Ast
 
-module StrMap = Map.Make(String)
-
 (* ----- Datatypes. ------ *)
 type universe = TYPE | KIND
 [@@deriving show]
@@ -162,10 +160,14 @@ let mk_pairwise (f : cc_term) (agg : cc_term) (args : cc_term list) : cc_term =
     let pairs = all_pairs args in
     app agg (List.map (fun (a,b) -> app f [a; b]) pairs)
 
-let param_is_list ctx str =
-  match StrMap.find_opt str ctx with
-  | Some (_,_,atts) -> atts.list
-  | None -> false
+let is_list_param ctx trm =
+  match trm with
+  | Var str ->
+    begin match StrMap.find_opt str ctx with
+    | Some (_,_,atts) -> atts.list
+    | None -> false
+    end
+  | _ -> false
 
 let list_concat f t r =
   App (App (App (Var ("eo::list_concat"), f), t), r)
@@ -174,7 +176,6 @@ let list_concat_left f r t =
   App (App (App (Var ("eo::list_concat"), f), r), t)
 
 let rec mk_app ctx f args att_opt =
-  let (Var str) = f in
   match att_opt with
   | None | Some (Binder _) ->
       List.fold_left (fun e arg -> App (e, arg)) f args
@@ -190,41 +191,45 @@ let rec mk_app ctx f args att_opt =
       | [x] -> App (f, x)
       | x :: xs -> List.fold_left (fun acc y -> app f [acc; y]) x xs)
   | Some (RightAssocNil nil) ->
+      begin match args with
+      | [] -> f
+      | [x] -> if is_list_param ctx x then x else app f [x;nil]
+      | _ ->
       let n = List.length args in
-      if n = 0 then f else
       let last = List.nth args (n - 1) in
       let init, start =
-        if param_is_list ctx str then (last, n - 2) else (nil, n - 1)
+        if is_list_param ctx last || nil = last
+        then (last, n - 2) else (nil, n - 1)
       in
       let rec aux i r =
         if i < 0 then r
         else
           let t = List.nth args i in
           let r' =
-            if param_is_list ctx str then list_concat f t r else app f [t; r]
+            if is_list_param ctx t then list_concat f t r else app f [t; r]
           in
           aux (i - 1) r'
       in
       aux start init
+      end
   | Some (LeftAssocNil nil) ->
-      (match args with
-      | [] -> f
-      | _ ->
+      let n = List.length args in
+      if n <= 2 then
+        app f args
+      else
         let first = List.hd args in
-        let init, start =
-          if param_is_list ctx str then (first, 1) else (nil, 0)
-        in
+        let init, start = if is_list_param ctx first then (first, 1) else (nil, 0) in
         let n = List.length args in
         let rec aux i r =
           if i >= n then r
           else
             let t = List.nth args i in
             let r' =
-              if param_is_list ctx str then list_concat_left f r t else app f [r; t]
+              if is_list_param ctx t then list_concat_left f r t else app f [r; t]
             in
             aux (i + 1) r'
         in
-        aux start init)
+          aux start init
   | Some (Chainable agg) -> mk_chain f agg args
   | Some (Pairwise agg) -> mk_pairwise f agg args
 
@@ -243,23 +248,6 @@ let rec map_cc_term
 
 let map_cc_rule (f : cc_term -> cc_term) (rs : cc_rule) : cc_rule =
   List.map (fun (l,r) -> (f l, f r)) rs
-
-let subst_trm sub trm =
-    map_cc_term (fun _ str ->
-      match StrMap.find_opt str sub with
-      | Some t -> t
-      | None -> Var str
-    ) [] trm
-
-let subst_rule (sub : cc_term StrMap.t) (params : param list) (rw : cc_rule) =
-  (* Remove domain of substituion from parameter list, apply substituion in types. *)
-  let params' =
-    List.filter_map (fun (str_opt, typ, atts) ->
-      match Option.bind str_opt (fun str -> StrMap.find_opt str sub) with
-      | Some _ -> None
-      | None -> Some (str_opt, subst_trm sub typ, atts)
-    ) params in
-  Rule (params', map_cc_rule (subst_trm sub) rw)
 
 let mk_bounds (xs : string option list) (trm : cc_term) =
   map_cc_term (fun bvs str ->

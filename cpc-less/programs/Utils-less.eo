@@ -1,3 +1,5 @@
+(include "../CompOp.eo")
+
 (declare-type @Pair (Type Type))
 (declare-const @pair (-> (! Type :var U :implicit) (! Type :var T :implicit) U T (@Pair U T)))
 

@@ -151,7 +151,7 @@
 )
 
 (program-schema :right-assoc-nil eo::cons
-    ((T1 Type) (T2 Type) (x T1) (y T1) (ys T2) (cons (-> T1 T2 T2)) (nil T2))
+    ((T1 Type) (T2 Type) (x T1) (y T1) (ys T2 :list) (cons (-> T1 T2 T2)) (nil T2))
     ((-> T1 T2 T2) T1 T2) T2
     (
         ((eo::cons cons x nil) (cons x nil))
@@ -160,7 +160,7 @@
 )
 
 (program-schema :right-assoc-nil eo::is_list
-    ((T1 Type) (T2 Type) (x T1) (xs T2) (cons (-> T1 T2 T2)) (nil T2))
+    ((T1 Type) (T2 Type) (x T1) (xs T2 :list) (cons (-> T1 T2 T2)) (nil T2))
     ((-> T1 T2 T2) T2) Bool
     (
         ((eo::is_list cons nil) true)
@@ -169,7 +169,7 @@
 )
 
 (program-schema :right-assoc-nil eo::list_len
-    ((T1 Type) (T2 Type) (x T1) (xs T2) (cons (-> T1 T2 T2)) (nil T2))
+    ((T1 Type) (T2 Type) (x T1) (xs T2 :list) (cons (-> T1 T2 T2)) (nil T2))
     ((-> T1 T2 T2) T2) eo::Int
     (
         ((eo::list_len cons nil) eo::0)
@@ -178,7 +178,7 @@
 )
 
 (program-schema :right-assoc-nil eo::list_concat
-    ((T1 Type) (T2 Type) (x T1) (xs T2) (y T1) (ys T2) (cons (-> T1 T2 T2)) (nil T2))
+    ((T1 Type) (T2 Type) (x T1) (xs T2 :list) (y T1) (ys T2 :list) (cons (-> T1 T2 T2)) (nil T2))
     ((-> T1 T2 T2) T2 T2) T2
     (
         ((eo::list_concat cons nil nil) nil)
@@ -189,7 +189,7 @@
 )
 
 (program-schema :right-assoc-nil eo::list_nth
-    ((T1 Type) (T2 Type) (x T1) (xs T2) (n eo::Int) (cons (-> T1 T2 T2)) (nil T2))
+    ((T1 Type) (T2 Type) (x T1) (xs T2 :list) (n eo::Int) (cons (-> T1 T2 T2)) (nil T2))
     ((-> T1 T2 T2) T2 eo::Int) T1
     (
         ((eo::list_nth cons (cons x xs) eo::0) x)
@@ -198,7 +198,7 @@
 )
 
 (program-schema :right-assoc-nil eo::list_elem
-    ((T1 Type) (T2 Type) (x T1) (xs T2) (y T1) (cons (-> T1 T2 T2)) (nil T2))
+    ((T1 Type) (T2 Type) (x T1) (xs T2 :list) (y T1) (cons (-> T1 T2 T2)) (nil T2))
     ((-> T1 T2 T2) T2 T1) Bool
     (
         ((eo::list_elem cons nil x) false)
@@ -208,7 +208,7 @@
 )
 
 (program-schema :right-assoc-nil eo::list_find_aux
-    ((T1 Type) (T2 Type) (x T1) (xs T2) (y T1) (i eo::Int) (cons (-> T1 T2 T2)) (nil T2))
+    ((T1 Type) (T2 Type) (x T1) (xs T2 :list) (y T1) (i eo::Int) (cons (-> T1 T2 T2)) (nil T2))
     ((-> T1 T2 T2) T2 T1 eo::Int) eo::Int
     (
         ((eo::list_find_aux cons nil x i) eo::-1)

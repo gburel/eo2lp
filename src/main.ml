@@ -1,7 +1,6 @@
 open Ast
 open Ast_cc
 open Sys
-open Filename
 open Translation
 open Encoding
 
@@ -17,17 +16,15 @@ let show (str : string) : string =
   | Some param -> Printf.sprintf "%s" (string_of_param [] param)
   | None -> Printf.sprintf "Symbol %s not found in context." str
 
-let proof_files = [
-  (* "test/rodin/smt1468783596909311386.smt2.prf"; *)
-]
+
 
 let find_eo_files (dir : string) : string list =
   let rec aux (dir : string) (acc : string list) =
     Array.fold_left (fun acc entry ->
-      let path = concat dir entry in
+      let path = Filename.concat dir entry in
       if is_directory path then
         aux path acc
-      else if check_suffix entry ".eo" then
+      else if Filename.check_suffix entry ".eo" then
         path :: acc
       else
         acc
@@ -68,13 +65,15 @@ let write_line ch str =
 
 let write_lp_cmd ch cmd = write_line ch (string_of_lp_cmd cmd)
 
-let thyU_imports =
-  [
-    "require open Logic.U.Set Logic.U.Prop;";
-    "require open Logic.U.Arrow Logic.U.DepArrow;";
+let thyU_imports = [
+    "Logic.U.Set";
+    "Logic.U.Prop";
+    "Logic.U.Arrow";
+    "Logic.U.DepArrow";
   ]
 
-let lp_imports (fp : string) : string =
+let lp_imports (fp : string) : string list =
+  let fp_norm = normalize_path fp "" in
   let rec trcl str : StrSet.t =
     match StrMap.find_opt str (tdata.deps) with
     | Some ips ->
@@ -83,11 +82,10 @@ let lp_imports (fp : string) : string =
         ) ips (StrSet.empty)
     | None -> StrSet.empty
   in
-  let eo_trcl = StrSet.map (fun str -> "eo2lp." ^ str) (trcl fp) in
-  if StrSet.is_empty eo_trcl then ""
-  else
-    let import_str = String.concat " " (StrSet.to_list eo_trcl) in
-    Printf.sprintf "require open %s;" import_str
+    StrSet.to_list (StrSet.map (fun str -> "eo2lp." ^ str) (trcl fp_norm))
+
+(* let proof_imports : string list = failwith "undefined" *)
+
 
 let rec create_parent_dir fn =
   let parent_dir = Filename.dirname fn in
@@ -96,34 +94,35 @@ let rec create_parent_dir fn =
     Sys.mkdir parent_dir 0o755
   end
 
-let write_lp_file (eo_fp : string) (cmds : lp_cmd list) : unit =
-    let import_str = lp_imports (normalize_path eo_fp "") in
-    let lp_fp = Filename.concat "lp" (Filename.chop_extension eo_fp) ^ ".lp" in
-    Printf.printf "Begin writing file: %s\n" lp_fp;
+let write_lp_file (fp : string) (imports : string list) (cmds : lp_cmd list) : unit =
+    let import_str =
+      Printf.sprintf "require open %s;\n\n"
+      (String.concat " " imports)
+    in
+
+    let lp_fp = Filename.concat "lp" (Filename.chop_extension fp) ^ ".lp" in
     let ch = create_parent_dir lp_fp; open_out lp_fp in
     begin
-      write_line ch (Printf.sprintf "// Begin translation of: %s" eo_fp);
-      List.iter (write_line ch) thyU_imports;
-      if basename lp_fp <> "CompOp.lp" then
-        write_line ch "require open eo2lp.CompOp;";
-      write_line ch import_str; output_char ch '\n';
+      Printf.printf "Begin writing file: %s\n" lp_fp;
+      write_line ch (Printf.sprintf "// Begin translation of: %s" fp);
+      write_line ch import_str;
       List.iter (write_lp_cmd ch) cmds;
-      Printf.printf "Done!\n\n";
       output_char ch '\n';
       close_out ch;
+      Printf.printf "Done!\n\n";
     end
 
 let proc_eo_file (fp : string) =
   begin
-    let idx = String.index fp '/' in
-    let eo_fp = String.sub fp (idx + 1) (String.length fp - idx - 1) in
-    tdata.filepath <- eo_fp;
-
     let t = Sys.time () in
     Printf.printf "Parsing file %s... " fp;
     let eo_cmds = parse_file fp in
     let t' = Sys.time () in
     Printf.printf "%fms\n" (Float.mul (Float.sub t' t) 1000.0);
+
+    let idx = String.index fp '/' in
+    let fp' = String.sub fp (idx + 1) (String.length fp - idx - 1) in
+    tdata.filepath <- fp';
 
     let t = Sys.time () in
     Printf.printf "Translating %d commands... " (List.length eo_cmds);
@@ -137,31 +136,53 @@ let proc_eo_file (fp : string) =
     let t' = Sys.time () in
     Printf.printf "%fms\n" (Float.mul (Float.sub t' t) 1000.0);
 
-    write_lp_file eo_fp lp_cmds;
+    let imports = (thyU_imports @ lp_imports fp') in
+    write_lp_file fp' imports lp_cmds;
   end
 
-let proc_eo_library : unit =
-  let paths = [
-    "cpc-less/CompOp.eo";
-    "cpc-less/programs/Utils-less.eo";
-    "cpc-less/programs/Nary-less.eo";
-    "cpc-less/theories/Builtin.eo";
-    "cpc-less/rules/Builtin.eo";
-    "cpc-less/rules/Booleans-less.eo";
-    "cpc-less/rules/Rewrites-less.eo";
-    "cpc-less/rules/Uf.eo";
+let eo_lib_paths = [
+    "CompOp.eo";
+    "programs/Utils-less.eo";
+    "programs/Nary-less.eo";
+    "theories/Builtin.eo";
+    "rules/Builtin.eo";
+    "rules/Booleans-less.eo";
+    "rules/Rewrites-less.eo";
+    "rules/Uf.eo";
     (* "cpc-less/rules/Uf.eo"; *)
-    (* "cpc-less/rules/Arith.eo"; *) ]
-  in
+    (* "cpc-less/rules/Arith.eo"; *)
+  ]
+
+let proc_eo_library (dir : string) : unit =
   begin
+    Printf.printf "Begin translating Eunoia library.";
     let t = Sys.time () in
-    init_tdata;
-    List.iter (proc_eo_file) paths;
+    List.iter (fun fp -> proc_eo_file (Filename.concat dir fp)) eo_lib_paths;
     let t' = Sys.time () in
     Printf.printf "Total processing time: %fms\n" (Float.mul (Float.sub t' t) 1000.0);
   end
 
-let main : unit = proc_eo_library
+let prf_paths = [
+    "rodin/smt1468783596909311386.smt2.prf";
+  ]
+
+let proc_eo_proofs (dir : string) : unit =
+  List.iter (fun fp ->
+    tdata.deps <- StrMap.update
+      (normalize_path fp "")
+      (fun _ -> Some (StrSet.of_list (List.map (fun fp -> normalize_path fp "") eo_lib_paths)))
+      tdata.deps
+  ) prf_paths;
+  List.iter proc_eo_file
+    (List.map (Filename.concat dir) prf_paths)
+
+let main : unit =
+  begin
+    proc_eo_library "cpc-less";
+    proc_eo_proofs "test";
+  end
+
+
 
 
 

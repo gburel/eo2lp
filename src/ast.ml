@@ -16,6 +16,8 @@ and attr = string * eo_term option
 and req_attr = (eo_term * eo_term)
 [@@deriving show]
 
+type eo_rule = (eo_term * eo_term) list
+
 (* context modifying commands. *)
 type base_command =
 | Assert of eo_term
@@ -152,6 +154,57 @@ let mk_eo_var ty =
       (str, ty', atts)
     end
   | _ -> ("_", ty, [])
+
+module StrMap = Map.Make(String)
+
+let rec subst_trm (sub : eo_term StrMap.t) (trm : eo_term) =
+  match trm with
+  | Literal l -> Literal l
+  | Symbol s ->
+    begin match StrMap.find_opt s sub with
+    | Some t -> t
+    | None -> Symbol s
+    end
+
+  | AppList (s, ts) ->
+    let ts' = List.map (subst_trm sub) ts in
+    begin match StrMap.find_opt s sub with
+    | Some (Symbol s') -> AppList (s', ts')
+    | Some t -> AppList ("_", t :: ts')
+    | None -> AppList (s, ts')
+    end
+
+  | Define (vs, trm) ->
+    let vs' = List.map (fun (v,ty,atts) -> (v, subst_trm sub ty, atts)) vs in
+    Define (vs', subst_trm sub trm)
+
+  | Match (vs, t, rws) ->
+    let vs' = List.map (fun (v,ty,atts) -> (v, subst_trm sub ty, atts)) vs in
+    let t' = subst_trm sub t in
+    let rws' = subst_rule sub rws in
+    Match (vs', t', rws')
+
+  | Attributed (t, reqs, atts) ->
+    let reqs' = List.map (fun (l,r) -> (subst_trm sub l, subst_trm sub r)) reqs in
+    Attributed (subst_trm sub t, reqs', atts)
+
+and subst_rule sub rws =
+  List.map (fun (lhs, rhs) -> (subst_trm sub lhs, subst_trm sub rhs)) rws
+
+let subst_prog (sub : eo_term StrMap.t) ((vs, rw) : eo_var list * eo_rule) =
+  (* Remove domain of substituion from parameter list, apply substituion in types. *)
+  let vs' =
+    List.filter_map (fun (str, ty, atts) ->
+      match StrMap.find_opt str sub with
+      | Some _ -> None
+      | None -> Some (str, subst_trm sub ty, atts)
+    ) vs in
+  (vs', subst_rule sub rw)
+
+let eo_binop_tys typ =
+  match typ with
+  | AppList ("->", t1 :: t2 :: _) -> (t1,t2)
+  | _ -> failwith "Not the type of a binary operator."
 
 (* in SMT3 but not Eunoia.
   | Import of string list

@@ -2,16 +2,24 @@ open Ast
 open Ast_cc
 open Inference
 
-module Rule = struct
-  type t = param list * cc_rule
+module Prog = struct
+  type t = eo_var list * (eo_term * eo_term) list
   let compare = compare
 end
 
-module RuleSet = Set.Make(Rule)
+module ProgSet = Set.Make(Prog)
+
+module EOSubst = struct
+  type t = eo_term StrMap.t
+    let compare = compare
+end
+
+module StrMapSet = Set.Make(EOSubst)
 
 type translation_data = {
+  mutable eo_progs : ProgSet.t StrMap.t;
+  mutable eo_binop : StrMapSet.t StrMap.t;
   mutable asserts : int;
-  mutable prog_schema : RuleSet.t StrMap.t;
   mutable context : cc_context;
   mutable filepath : string;
   mutable deps : StrSet.t StrMap.t;
@@ -30,31 +38,23 @@ let normalize_path (ipath : string) (fpath : string) =
   let fpath_dirs = String.split_on_char (delim.[0]) fpath'' in
   String.concat "." ((List.tl fpath_dirs) @ dirs')
 
-let eo_typeof_typ =
-  mk_pi [
-    (Some "S", Univ TYPE, {atts_init with implicit=true});
-    (None, Var "S", atts_init)
-  ] (Univ TYPE)
-
-let tdata_default =
-   {
+let tdata =
+  {
     asserts = 0;
-    prog_schema = StrMap.empty;
-    context = StrMap.of_list [
-      ("eo::typeof", (Some "eo::typeof", eo_typeof_typ, atts_init)) ];
+    context = StrMap.empty;
     filepath = "";
     deps = StrMap.empty;
+    eo_progs =
+      StrMap.of_list [
+        ("right-assoc-nil", ProgSet.empty);
+        ("left-assoc-nil", ProgSet.empty);
+      ];
+    eo_binop =
+      StrMap.of_list [
+        ("right-assoc-nil", StrMapSet.empty);
+        ("left-assoc-nil", StrMapSet.empty);
+      ];
   }
-
-let tdata = tdata_default
-let init_tdata =
-  begin
-    tdata.asserts <- tdata_default.asserts;
-    tdata.prog_schema <- tdata_default.prog_schema;
-    tdata.context <- tdata_default.context;
-    tdata.filepath <- tdata_default.filepath;
-    tdata.deps <- tdata_default.deps;
-  end
 
 let glob_ctx_add str typ : unit =
   tdata.context <- ctx_add str typ tdata.context
@@ -228,38 +228,10 @@ let eo_decl_attr ctx bvs (att : attr) =
 
 let att_stem att = List.hd (String.split_on_char ' ' (string_of_attribute att))
 
-let inst_schema prog_map att_str (cons,nil,t1,t2)  =
-  let subst = StrMap.of_list [
-    ("cons", cons); ("nil", nil); ("T1", t1); ("T2", t2) ] in
-  let schema_set =
-    match StrMap.find_opt att_str prog_map with
-    | Some x -> x
-    | None -> RuleSet.empty
-  in
-  RuleSet.fold (fun (ps, rws) acc ->
-    subst_rule subst ps rws :: acc) schema_set []
-
-let cons_tys typ =
-  match typ with
-  | Bind (Pi, (_,ty1,_),
-      Bind (Pi, (_,ty2,_), _))
-    -> (ty1, ty2)
-  | _ -> failwith (Printf.sprintf "Term %s doesn't have 2 leading Pi's." (string_of_term typ))
-
-(* for a given direction, return list of cons and nil operators in a context *)
-let sig_assocs (ctx : cc_context) (att_str : string) =
-  List.filter_map (fun (str,(_,ty,atts)) ->
-    Option.bind atts.apply (function
-      | RightAssocNil nil when att_str = ":right-assoc-nil" ->
-        let (t1,t2) = cons_tys ty in
-        Some (Var str, nil, t1, t2)
-      | LeftAssocNil nil when att_str = ":left-assoc-nil" ->
-        let (t1,t2) = cons_tys ty in
-        Some (Var str, nil, t1, t2)
-      | _ -> None
-    )
-  ) (StrMap.to_list ctx)
-
+let inst_eo_schema ctx (schema : Prog.t) (subst : EOSubst.t)  =
+  let (vs, rws) = subst_prog subst schema in
+  let vs' = List.map (eo_var_cc ctx []) vs in
+  Rule (vs', List.map (eo_cc_rule (ctx_append_param vs' ctx) []) rws)
 
 let base_cmd_cc (cmd : base_command) : cc_command list =
   match cmd with
@@ -274,24 +246,43 @@ let base_cmd_cc (cmd : base_command) : cc_command list =
     [ Const (aname, typ) ]
 
   | DeclareConst (str, typ, atts) ->
+
     let typ' = eo_cc_term ctx_init [] typ in
-    let att_opt =
+    let eo_att_opt =
       match atts with
-      | [] -> None
-      | att::[] -> Some (eo_decl_attr ctx_init [] att)
-      | _ -> failwith "More than one declaration attribute."
+      | []      -> None
+      | att::[] -> Some att
+      | _ -> failwith "More than one attribute in constant declaration."
     in
 
-    let rw_insts =
-      match att_opt with
-      | Some ((RightAssocNil nil|LeftAssocNil nil) as att) ->
-        let (ty1,ty2) = cons_tys typ' in
-        inst_schema tdata.prog_schema (att_stem att) (Var str, nil, ty1, ty2)
-      | _ -> []
+    let cc_att_opt = Option.map (eo_decl_attr ctx_init []) eo_att_opt in
+    glob_ctx_add_param (Some str, typ', { atts_init with apply = cc_att_opt });
+
+    let rw_cmds =
+      begin match eo_att_opt with
+      | None -> []
+      | Some ("right-assoc-nil", Some nil) ->
+          let (ty1, ty2) = eo_binop_tys typ in
+          let subst = StrMap.of_list
+            [ ("cons", Symbol str); ("nil", nil);
+              ("T1", ty1); ("T2", ty2) ]
+          in
+          (* update record of binops *)
+          tdata.eo_binop <- StrMap.update "right-assoc-nil"
+            (function
+              | Some x -> Some (StrMapSet.add subst x)
+              | _ -> None
+            ) tdata.eo_binop;
+
+          (* return all instances of prog schemas indexed by `att_str` *)
+          ProgSet.fold
+            (fun prog acc -> inst_eo_schema tdata.context prog subst :: acc)
+            (StrMap.find "right-assoc-nil" tdata.eo_progs) []
+      | Some _ -> []
+      end
     in
 
-    glob_ctx_add_param (Some str, typ', { atts_init with apply = att_opt });
-    Const (str, typ') :: rw_insts
+    Const (str, typ') :: rw_cmds
 
   | DefineConst (str, trm) ->
     let trm' = eo_cc_term ctx_init [] trm in
@@ -436,7 +427,7 @@ let eunoia_cmd_cc (cmd : eunoia_command) : cc_command list =
     in
       tdata.deps <- deps'; []
 
-  | Program (str, att_str_opt, eo_ps, dom_tys, ran_ty, eo_rw_rules) ->
+  | Program (str, att_str_opt, eo_ps, dom_tys, ran_ty, eo_prog) ->
     let params = List.map (eo_var_cc ctx_init []) eo_ps in
     let ctx = ctx_append_param params ctx_init in
     let prog_ty_raw = eo_arrow_cc ctx [] (dom_tys @ [ran_ty]) in
@@ -444,20 +435,20 @@ let eunoia_cmd_cc (cmd : eunoia_command) : cc_command list =
     glob_ctx_add str prog_ty;
 
     (* infer implicits for rules *)
-    let rws = List.map (eo_cc_rule ctx []) eo_rw_rules in
+    let rws = List.map (eo_cc_rule ctx []) eo_prog in
 
     begin match att_str_opt with
-    (* if it's a program schema, then add skeleton to tdata.*)
     | Some astr ->
-      let att_str = ":" ^ astr in
-      tdata.prog_schema <- StrMap.update att_str (function
-        | Some x -> Some (RuleSet.add (params, rws) x)
-        | None -> Some (RuleSet.singleton (params, rws))
-      ) tdata.prog_schema;
+      (* update map for eo_program schema.*)
+      tdata.eo_progs <- StrMap.update astr (function
+        | Some x -> Some (ProgSet.add (eo_ps, eo_prog) x)
+        | None -> failwith (Printf.sprintf "Unknown attribute: %s" astr)
+      ) tdata.eo_progs;
+
       (* also, instantiate for all constants with attribute given by `att_str`*)
-      let att_consts = sig_assocs tdata.context att_str in
-      let prog_insts = List.concat_map
-        (inst_schema tdata.prog_schema att_str) att_consts in
+      let prog_insts = StrMapSet.fold
+        (fun sub acc -> inst_eo_schema tdata.context (eo_ps, eo_prog) sub :: acc)
+        (StrMap.find astr tdata.eo_binop) [] in
 
       Prog (str, prog_ty) :: prog_insts
 
