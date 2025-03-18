@@ -16,8 +16,6 @@ let show (str : string) : string =
   | Some param -> Printf.sprintf "%s" (string_of_param [] param)
   | None -> Printf.sprintf "Symbol %s not found in context." str
 
-
-
 let find_eo_files (dir : string) : string list =
   let rec aux (dir : string) (acc : string list) =
     Array.fold_left (fun acc entry ->
@@ -73,7 +71,7 @@ let thyU_imports = [
   ]
 
 let lp_imports (fp : string) : string list =
-  let fp_norm = normalize_path fp "" in
+  let fp' = (normalize_path fp "") in
   let rec trcl str : StrSet.t =
     match StrMap.find_opt str (tdata.deps) with
     | Some ips ->
@@ -82,7 +80,10 @@ let lp_imports (fp : string) : string list =
         ) ips (StrSet.empty)
     | None -> StrSet.empty
   in
-    StrSet.to_list (StrSet.map (fun str -> "eo2lp." ^ str) (trcl fp_norm))
+    StrSet.to_list
+      (StrSet.map (fun str -> "eo2lp." ^ str)
+        (trcl fp')
+      )
 
 (* let proof_imports : string list = failwith "undefined" *)
 
@@ -120,7 +121,7 @@ let proc_eo_file (fp : string) =
     let t' = Sys.time () in
     Printf.printf "%fms\n" (Float.mul (Float.sub t' t) 1000.0);
 
-    let idx = String.index fp '/' in
+    let idx = String.index fp (Filename.dir_sep.[0]) in
     let fp' = String.sub fp (idx + 1) (String.length fp - idx - 1) in
     tdata.filepath <- fp';
 
@@ -145,10 +146,11 @@ let eo_lib_paths = [
     "programs/Utils-less.eo";
     "programs/Nary-less.eo";
     "theories/Builtin.eo";
-    "rules/Builtin.eo";
+    (* "rules/Builtin.eo"; *)
     "rules/Booleans-less.eo";
     "rules/Rewrites-less.eo";
     "rules/Uf.eo";
+    "Cpc.eo"
     (* "cpc-less/rules/Uf.eo"; *)
     (* "cpc-less/rules/Arith.eo"; *)
   ]
@@ -164,15 +166,18 @@ let proc_eo_library (dir : string) : unit =
 
 let prf_paths = [
     "rodin/smt1468783596909311386.smt2.prf";
+    "rodin/smt3534838651727683253.smt2.prf";
   ]
 
 let proc_eo_proofs (dir : string) : unit =
+  let imports = List.map (fun fp -> normalize_path fp "") eo_lib_paths in
   List.iter (fun fp ->
     tdata.deps <- StrMap.update
       (normalize_path fp "")
-      (fun _ -> Some (StrSet.of_list (List.map (fun fp -> normalize_path fp "") eo_lib_paths)))
+      (fun _ -> Some (StrSet.of_list imports))
       tdata.deps
   ) prf_paths;
+
   List.iter proc_eo_file
     (List.map (Filename.concat dir) prf_paths)
 

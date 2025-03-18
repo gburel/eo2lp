@@ -267,6 +267,21 @@
     :conclusion F
 )
 
+; rule: and_cons
+; implements: !!
+; premises:
+; - x: The first conjunct.
+; - xs [:list]: The rest of the and-list.
+; conclusion: The result of collecting the premises as an and-list.
+(declare-rule and_cons ((x Bool) (xs Bool :list))
+    :premises (x xs)
+    :conclusion (and x xs)
+)
+
+(declare-rule trueI ()
+  :conclusion true
+)
+
 ; rule: not_or_elim
 ; implements: ProofRule::NOT_OR_ELIM
 ; premises:

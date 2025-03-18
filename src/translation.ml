@@ -32,6 +32,7 @@ let normalize_path (ipath : string) (fpath : string) =
     (Filename.chop_extension ipath) in
   let rec move fp = function
   | (".." :: xs) -> move (Filename.dirname fp) xs
+  | ("." :: xs) -> (fp, xs)
   | xs -> (fp, xs)
   in
   let (fpath'', dirs') = move fpath' dirs in
@@ -106,11 +107,16 @@ let rec eo_cc_term (ctx : cc_context) (bvs : param list) (trm : eo_term) : cc_te
   | AppList (str, args) ->
     begin match str with
       | "->" -> eo_arrow_cc ctx bvs args
+      (* | "_" ->
+        begin match List.map (eo_cc_term ctx bvs) args with
+        | [] -> failwith "Explicit application with no arguments!"
+        | t::ts -> app t ts
+        end *)
       | _ ->
         let args' = List.map (eo_cc_term ctx bvs) args in
         let ctx' = ctx_join ctx tdata.context in
         begin match StrMap.find_opt str ctx' with
-        | Some (_,_,atts) -> mk_app ctx (Var str) args' (atts.apply)
+        | Some (_,_,atts) -> mk_app ctx bvs (Var str) args' (atts.apply)
         | None -> failwith (Printf.sprintf "Can't find symbol %s in context." str)
         end
     end
@@ -226,12 +232,14 @@ let eo_decl_attr ctx bvs (att : attr) =
   | ("binder",    Some trm) -> Binder (eo_cc_term ctx bvs trm)
   | _ -> failwith "Unknown declaration attribute."
 
+
 let att_stem att = List.hd (String.split_on_char ' ' (string_of_attribute att))
 
 let inst_eo_schema ctx (schema : Prog.t) (subst : EOSubst.t)  =
   let (vs, rws) = subst_prog subst schema in
   let vs' = List.map (eo_var_cc ctx []) vs in
   Rule (vs', List.map (eo_cc_rule (ctx_append_param vs' ctx) []) rws)
+
 
 let base_cmd_cc (cmd : base_command) : cc_command list =
   match cmd with
@@ -246,7 +254,6 @@ let base_cmd_cc (cmd : base_command) : cc_command list =
     [ Const (aname, typ) ]
 
   | DeclareConst (str, typ, atts) ->
-
     let typ' = eo_cc_term ctx_init [] typ in
     let eo_att_opt =
       match atts with
@@ -258,13 +265,15 @@ let base_cmd_cc (cmd : base_command) : cc_command list =
     let cc_att_opt = Option.map (eo_decl_attr ctx_init []) eo_att_opt in
     glob_ctx_add_param (Some str, typ', { atts_init with apply = cc_att_opt });
 
-    let rw_cmds =
+    let rw_cmds = if str = "@list" then [] else
       begin match eo_att_opt with
       | None -> []
       | Some ("right-assoc-nil", Some nil) ->
           let (ty1, ty2) = eo_binop_tys typ in
+          let cons_trm = Symbol str in
+
           let subst = StrMap.of_list
-            [ ("cons", Symbol str); ("nil", nil);
+            [ ("cons", cons_trm); ("nil", nil);
               ("T1", ty1); ("T2", ty2) ]
           in
           (* update record of binops *)
@@ -329,34 +338,17 @@ let eunoia_cmd_cc (cmd : eunoia_command) : cc_command list =
   | DeclareRule (str, ps, rspec) ->
     let params = List.map (eo_var_cc ctx_init []) ps in
     let loc_ctx = ctx_append_param params ctx_init in
-    let concl_bool = eo_cc_term loc_ctx [] rspec.conclusion in
-    let concl = appvar "Proof" [concl_bool] in
+    let concl = eo_cc_term loc_ctx [] rspec.conclusion in
 
-    let rule_typ_body =
+    let (prem_list_opt, prem_ptrns) =
       begin match rspec.prems with
       | Some (Premises ts) ->
-        let prem_tys = List.map (fun t ->
-          appvar "Proof" [eo_cc_term loc_ctx [] t]) ts
-        in
-          mk_pi_nameless prem_tys concl
-
-      | Some (PremiseList (trm,op)) ->
-        let prem_trm = eo_cc_term loc_ctx [] trm in
-        let op_trm = eo_cc_term loc_ctx [] op in
-        appvar "If" [
-          appvar "eo::is_list" [op_trm; prem_trm];
-          mk_pi_nameless [appvar "Proof" [prem_trm]] concl
-        ]
-      | None -> concl
-      end
-    in
-
-    (* TODO. do something meaningful on PremiseList *)
-    let prem_ptrns =
-      begin match rspec.prems with
-      | Some (Premises ts) -> List.map (eo_cc_term loc_ctx []) ts
-      | Some (PremiseList (trm,_)) -> [ eo_cc_term loc_ctx [] trm ]
-      | None -> [ ]
+          (None, List.map (eo_cc_term loc_ctx []) ts)
+      (* TODO. check that `trm` is an `op`-list. *)
+      | Some (PremiseList (trm, op)) ->
+          (Some (eo_cc_term loc_ctx [] op), [ eo_cc_term loc_ctx [] trm ])
+      | None ->
+          (None, [])
       end
     in
 
@@ -372,7 +364,7 @@ let eunoia_cmd_cc (cmd : eunoia_command) : cc_command list =
 
     let aux_params = ParamSet.to_list
       (ParamSet.diff
-        (filter_vars loc_ctx rule_typ_body)
+        (map_filter_vars loc_ctx prem_ptrns)
         (map_filter_vars loc_ctx arg_ptrns)
       )
     in
@@ -388,7 +380,7 @@ let eunoia_cmd_cc (cmd : eunoia_command) : cc_command list =
     glob_ctx_add aux_str aux_typ;
 
     (* elaborate lhs/rhs with explicits where needed.*)
-    let rws = [(appvar aux_str (arg_ptrns @ aux_param_vars), concl_bool)] in
+    let rws = [(appvar aux_str (arg_ptrns @ aux_param_vars), concl)] in
     let aux_cmds = [ Prog (aux_str, aux_typ); Rule (params, rws) ] in
 
   (* step 2. create signature for main inference rule. *)
@@ -406,7 +398,9 @@ let eunoia_cmd_cc (cmd : eunoia_command) : cc_command list =
     ) in
     let rule_typ = close_term loc_ctx rule_typ_raw in
 
-    glob_ctx_add str rule_typ;
+    glob_ctx_add_param (Some str, rule_typ,
+      { atts_init with premise_list = prem_list_opt });
+
     aux_cmds @ [ Const (str, rule_typ) ]
 
   | DeclareConsts (lcat, eo_typ) ->
@@ -468,6 +462,18 @@ let proof_prop (trm : cc_term) : cc_term =
       )
     end  | _ -> failwith (Printf.sprintf "Not a variable: %s" (string_of_term trm))
 
+(* Given a list of proof terms `ts` such that `ts i : Proof (p i)`,
+   let conj_proofs be a proof term such that
+    `conj_proofs ts : Proof (and (p 0) ... (and (p n) true) ) ` *)
+let and_cons_proof ts =
+  List.fold_right (fun trm acc -> appvar "and_cons" [trm; acc]) ts (Var "trueI")
+
+let rec conv_int_literal (lit : cc_term) =
+  match lit with
+  | Literal (Numeral 0) -> Var ("eo::0")
+  | Literal (Numeral n) -> App (Var "eo::succ",  conv_int_literal (Literal (Numeral (n-1))))
+  | _ -> failwith "Term is not a literal numeral."
+
 let proof_cmd_cc (cmd : proof_command) : cc_command list =
   match cmd with
   | Assume (str, trm) ->
@@ -481,23 +487,53 @@ let proof_cmd_cc (cmd : proof_command) : cc_command list =
     let concl_prop = eo_cc_term ctx_init [] (Option.get trm_opt) in
     let concl = appvar "Proof" [concl_prop] in
 
-    let prems = match prem_opt with
-      | Some (Premises ts) -> List.map (eo_cc_term ctx_init []) ts
-      | _ -> []
-    in
-
-    let args = match arg_opt with
-      | Some ts -> List.map (eo_cc_term ctx_init []) ts
+    let prems =
+      begin match prem_opt with
       | None -> []
+      | Some (Premises ts) ->
+        let ts' = List.map (eo_cc_term ctx_init []) ts in
+        begin match StrMap.find_opt rule tdata.context with
+        | None -> failwith (Printf.sprintf "Cannot find rule %s in context." rule)
+        | Some (_, _, atts) ->
+          begin match atts.premise_list with
+          | Some (Var "and") -> [and_cons_proof ts']
+          | _ -> ts'
+          end
+        end
+      end
     in
 
-    let def = appvar rule (prems @ args) in
+
     let trm_defs = StrMap.filter_map
       (fun str (_,_,atts) ->
         if String.starts_with ~prefix:"@t" str
         then atts.definition else None
-      ) tdata.context in
+      ) tdata.context
+    in
 
+    let args =
+      let rec app_explicit (depth : int) (trm : cc_term) =
+        if depth = 0 then trm else
+        begin match trm with
+        | App (f, t) -> appvar "APP" [app_explicit (depth - 1) f; t]
+        |  _ -> trm
+        end
+      in
+      begin match arg_opt with
+      | Some ts ->
+        let ts' = List.map (eo_cc_term ctx_init []) ts in
+        begin match rule with
+          | "cong" ->
+              let t = expand_defs trm_defs (List.hd ts') in
+              [t; app_explicit (List.length prems) t]
+          | "and_elim" -> [conv_int_literal (List.hd ts')]
+          | _ -> ts'
+        end
+      | None -> []
+      end
+    in
+
+    let def = appvar rule (prems @ args) in
     let def' = infer_term tdata.context trm_defs def in
     let param = (Some str, concl, {atts_init with definition = Some def'}) in
 

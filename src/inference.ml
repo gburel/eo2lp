@@ -298,7 +298,7 @@ and occurs_check (m : int) (term : cc_term) : bool =
 
 let infer ctx trm =
   if !debug_inference then
-    Printf.printf "Begin inferring type of %s\n" (string_of_term trm);
+    Printf.printf "\nBegin inferring type of %s\n" (string_of_term trm);
 
   let (trm', mctx) = elaborate_term ctx trm in
   if !debug_inference && trm' <> trm then
@@ -324,7 +324,7 @@ let rec expand_defs (defs : cc_term StrMap.t) (trm : cc_term) : cc_term =
 
 let infer_term ctx defs trm =
   if !debug_inference then
-    Printf.printf "Begin elaboration of %s via type inference.\n"
+    Printf.printf "\nBegin elaboration of %s via type inference.\n"
       (string_of_term trm);
 
   let (trm', mctx) = elaborate_term ctx trm in

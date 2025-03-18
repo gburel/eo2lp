@@ -25,6 +25,7 @@ and cc_atts = {
     implicit : bool;
     list : bool;
     apply : app_attr option;
+    premise_list : cc_term option;
   }
 and app_attr =
   | RightAssoc
@@ -51,6 +52,7 @@ let atts_init = {
   implicit = false;
   list = false;
   apply = None;
+  premise_list = None;
 }
 
 let is_univ trm = match trm with
@@ -160,13 +162,18 @@ let mk_pairwise (f : cc_term) (agg : cc_term) (args : cc_term list) : cc_term =
     let pairs = all_pairs args in
     app agg (List.map (fun (a,b) -> app f [a; b]) pairs)
 
-let is_list_param ctx trm =
+let is_list_param ctx bvs trm =
   match trm with
   | Var str ->
-    begin match StrMap.find_opt str ctx with
-    | Some (_,_,atts) -> atts.list
-    | None -> false
-    end
+      begin match StrMap.find_opt str ctx with
+      | Some (_,_,atts) -> atts.list
+      | None -> false
+      end
+  | Bound idx ->
+      begin match List.nth_opt bvs idx with
+      | Some (_,_,atts) -> atts.list
+      | None -> false
+      end
   | _ -> false
 
 let list_concat f t r =
@@ -175,7 +182,7 @@ let list_concat f t r =
 let list_concat_left f r t =
   App (App (App (Var ("eo::list_concat"), f), r), t)
 
-let rec mk_app ctx f args att_opt =
+let rec mk_app ctx bvs f args att_opt =
   match att_opt with
   | None | Some (Binder _) ->
       List.fold_left (fun e arg -> App (e, arg)) f args
@@ -184,7 +191,7 @@ let rec mk_app ctx f args att_opt =
       | [] -> f
       | [x] -> App (f, x)
       | [x; y] -> app f [x; y]
-      | x :: xs -> app f [x; mk_app ctx f xs att_opt])
+      | x :: xs -> app f [x; mk_app ctx bvs f xs att_opt])
   | Some LeftAssoc ->
       (match args with
       | [] -> f
@@ -193,24 +200,25 @@ let rec mk_app ctx f args att_opt =
   | Some (RightAssocNil nil) ->
       begin match args with
       | [] -> f
-      | [x] -> if is_list_param ctx x then x else app f [x;nil]
+      | [x] -> if is_list_param ctx bvs x then x else app f [x;nil]
+      (* | [x;y] -> if is_list_param ctx bvs y
+          then app f [x;y]
+          else app f [x; mk_app ctx bvs f [y] att_opt] *)
       | _ ->
       let n = List.length args in
       let last = List.nth args (n - 1) in
       let init, start =
-        if is_list_param ctx last || nil = last
+        if is_list_param ctx bvs last || nil = last
         then (last, n - 2) else (nil, n - 1)
       in
       let rec aux i r =
         if i < 0 then r
         else
           let t = List.nth args i in
-          let r' =
-            if is_list_param ctx t then list_concat f t r else app f [t; r]
-          in
-          aux (i - 1) r'
+          let r' = if is_list_param ctx bvs t then list_concat f t r else app f [t; r]
+          in aux (i - 1) r'
       in
-      aux start init
+        aux start init
       end
   | Some (LeftAssocNil nil) ->
       let n = List.length args in
@@ -218,14 +226,14 @@ let rec mk_app ctx f args att_opt =
         app f args
       else
         let first = List.hd args in
-        let init, start = if is_list_param ctx first then (first, 1) else (nil, 0) in
+        let init, start = if is_list_param ctx bvs first then (first, 1) else (nil, 0) in
         let n = List.length args in
         let rec aux i r =
           if i >= n then r
           else
             let t = List.nth args i in
             let r' =
-              if is_list_param ctx t then list_concat_left f r t else app f [r; t]
+              if is_list_param ctx bvs t then list_concat_left f r t else app f [r; t]
             in
             aux (i + 1) r'
         in
@@ -376,7 +384,7 @@ let rec string_of_term' (bvs : (string option) list) (t : cc_term) =
   | Univ TYPE -> "TYPE"
   | Literal l -> string_of_literal l
   | Explicit t -> "[" ^ string_of_term' bvs t ^ "]"
-  | Var x -> x
+  | Var x -> "!" ^ x
   | Meta x -> "?" ^ (string_of_int x)
   | Bound i -> (* Printf.sprintf "b%d" i *)
     begin match List.nth_opt bvs i with

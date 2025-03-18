@@ -6,8 +6,10 @@
 ; untyped list
 (declare-type @List ())
 (declare-const @list.nil @List)
-(declare-const @list (-> (! Type :var T :implicit) T @List @List))
-; remove :right-assoc-nil because we don't need it yet and it causes problems.
+(declare-const @list (-> (! Type :var T :implicit) T @List @List)
+  :right-assoc-nil @list.nil
+)
+; for now, we manually add the rules we need for @list being right-assoc-nil.
 
 (program-schema :right-assoc-nil $singleton_elim
   ((T1 Type) (T2 Type) (x1 T1) (x2 T2 :list) (x T2) (cons (-> T1 T2 T2)) (nil T2))

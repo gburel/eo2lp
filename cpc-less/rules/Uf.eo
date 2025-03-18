@@ -79,7 +79,7 @@
     (U Bool) U
     (
         (
-          ($mk_cong_rhs (_ f t1) (and (= t1 t2) tail))
+          ($mk_cong_rhs (APP f t1) (and (= t1 t2) tail))
           (_ ($mk_cong_rhs f tail) t2)
         )
         ( ($mk_cong_rhs f true)                       f)
@@ -99,10 +99,10 @@
 ;   given by the equalities in E.
 ; note: >
 ;   Congruence for n-ary operators requires a different rule (nary_cong) below.
-(declare-rule cong ((U Type) (E Bool) (t U))
+(declare-rule cong ((U Type) (E Bool) (t1 U) (t2 U))
     :premise-list E and
-    :args (t)
-    :conclusion (= t ($mk_cong_rhs t ($nary_reverse E)))
+    :args (t1 t2)
+    :conclusion (= t1 ($mk_cong_rhs t2 ($nary_reverse E)))
 )
 
 ;;;;; ProofRule::NARY_CONG

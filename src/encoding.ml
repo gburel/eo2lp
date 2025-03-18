@@ -210,7 +210,12 @@ and encode_term (bvs : lp_var list) (trm : cc_term) : lp_term =
     )
   | Bound i -> Bound i
   | Var x   -> Var (cc_lp_iden (Some x))
-  | App (t1,t2) -> App (encode_term bvs t1, encode_term bvs t2)
+  | App (App (App (App (Var "_", Explicit _), Explicit _), f), x) ->
+      App (encode_term bvs f, encode_term bvs x)
+  | App (App (Var "_", f), x) ->
+      App (encode_term bvs f, encode_term bvs x)
+  | App (t1,t2) ->
+      App (encode_term bvs t1, encode_term bvs t2)
 
 let rec map_lp_term (f : string -> lp_term) = fun trm ->
   match trm with
@@ -225,6 +230,7 @@ let rec map_lp_term (f : string -> lp_term) = fun trm ->
   | Bound i -> Bound i
   | Ptrn x -> Ptrn x
   | Var x -> f x
+
 
 let mk_ptrn_vars (vs : string list) =
   let f = (fun x -> if List.mem x vs then Ptrn x else Var x)

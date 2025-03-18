@@ -1,4 +1,6 @@
+(declare-const APP (-> (! Type :var S :implicit) (! Type :var T :implicit) (-> S T) S T))
 (declare-const _ (-> (! Type :var S :implicit) (! Type :var T :implicit) (-> S T) S T))
+
 
 (declare-type Bool ())
 (declare-const true Bool)
@@ -155,7 +157,7 @@
     ((-> T1 T2 T2) T1 T2) T2
     (
         ((eo::cons cons x nil) (cons x nil))
-        ((eo::cons cons x (cons y ys)) (cons x (cons y ys)))
+        ((eo::cons cons x (cons y ys)) (cons x y ys))
     )
 )
 
@@ -182,9 +184,17 @@
     ((-> T1 T2 T2) T2 T2) T2
     (
         ((eo::list_concat cons nil nil) nil)
-        ((eo::list_concat cons nil (cons y ys)) (cons y ys))
-        ((eo::list_concat cons (cons x xs) nil) (cons x xs))
-        ((eo::list_concat cons (cons x xs) (cons y ys)) (cons x (eo::list_concat cons xs (cons y ys))))
+        ((eo::list_concat cons nil (cons y ys))
+          (cons y ys))
+        ((eo::list_concat cons (cons x xs) nil)
+          (cons x xs))
+        (
+          (eo::list_concat cons (cons x xs) (cons y ys))
+          (eo::define
+            ( (zs (eo::list_concat cons xs (cons y ys)) :list) )
+            (cons x zs)
+          )
+        )
     )
 )
 

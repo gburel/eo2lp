@@ -201,9 +201,14 @@ let subst_prog (sub : eo_term StrMap.t) ((vs, rw) : eo_var list * eo_rule) =
     ) vs in
   (vs', subst_rule sub rw)
 
-let eo_binop_tys typ =
+let rec eo_binop_tys typ =
   match typ with
-  | AppList ("->", t1 :: t2 :: _) -> (t1,t2)
+  | AppList ("->", t1 :: t2 :: tys) ->
+    begin match t1 with
+    | Attributed (_,_,atts) when is_implicit atts ->
+      eo_binop_tys (AppList ("->", t2 :: tys))
+    | _ -> (t1,t2)
+    end
   | _ -> failwith "Not the type of a binary operator."
 
 (* in SMT3 but not Eunoia.

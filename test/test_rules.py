@@ -39,7 +39,6 @@ def main():
                     "--proof-format-mode=cpc",
                     "--proof-granularity=dsl-rewrite",
                     "--proof-print-conclusion",
-                    "--dag-thresh=0",
                     "--expr-depth=-1",
                     filename
                 ],
