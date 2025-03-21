@@ -208,7 +208,7 @@ let rec mk_app ctx bvs f args att_opt =
       let n = List.length args in
       let last = List.nth args (n - 1) in
       let init, start =
-        if is_list_param ctx bvs last || nil = last
+        if is_list_param ctx bvs last (* || nil = last *)
         then (last, n - 2) else (nil, n - 1)
       in
       let rec aux i r =

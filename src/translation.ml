@@ -465,14 +465,33 @@ let proof_prop (trm : cc_term) : cc_term =
 (* Given a list of proof terms `ts` such that `ts i : Proof (p i)`,
    let conj_proofs be a proof term such that
     `conj_proofs ts : Proof (and (p 0) ... (and (p n) true) ) ` *)
-let and_cons_proof ts =
+let and_fold_proof ts =
   List.fold_right (fun trm acc -> appvar "and_cons" [trm; acc]) ts (Var "trueI")
+
+let and_fold_prop ts =
+  List.fold_right (fun trm acc -> appvar "and" [trm; acc]) ts (Var "true")
 
 let rec conv_int_literal (lit : cc_term) =
   match lit with
   | Literal (Numeral 0) -> Var ("eo::0")
   | Literal (Numeral n) -> App (Var "eo::succ",  conv_int_literal (Literal (Numeral (n-1))))
   | _ -> failwith "Term is not a literal numeral."
+
+let rec app_explicit (depth : int) (trm : cc_term) =
+  if depth = 0 then trm else
+  begin match trm with
+  | App (f, t) -> appvar "APP" [app_explicit (depth - 1) f; t]
+  |  _ -> trm
+  end
+
+let rec app2_explicit (depth : int) (trm : cc_term) =
+  if depth = 0 then trm else
+  begin match trm with
+  | App (App (f, t1), t2) ->
+      let t2' = app2_explicit (depth - 1) t2 in
+      appvar "APP2" [f; t1; t2']
+  |  _ -> trm
+  end
 
 let proof_cmd_cc (cmd : proof_command) : cc_command list =
   match cmd with
@@ -490,19 +509,29 @@ let proof_cmd_cc (cmd : proof_command) : cc_command list =
     let prems =
       begin match prem_opt with
       | None -> []
-      | Some (Premises ts) ->
-        let ts' = List.map (eo_cc_term ctx_init []) ts in
-        begin match StrMap.find_opt rule tdata.context with
-        | None -> failwith (Printf.sprintf "Cannot find rule %s in context." rule)
-        | Some (_, _, atts) ->
-          begin match atts.premise_list with
-          | Some (Var "and") -> [and_cons_proof ts']
-          | _ -> ts'
-          end
-        end
+      | Some (Premises ts) -> List.map (eo_cc_term ctx_init []) ts
       end
     in
 
+    let aux_cmd_opt =
+      begin match StrMap.find_opt rule tdata.context with
+      | None -> failwith (Printf.sprintf "Cannot find rule %s in context." rule)
+      | Some (_, _, atts) ->
+        begin match atts.premise_list with
+        | Some (Var "and") ->
+            let props = List.map proof_prop prems in
+            let aux_typ = appvar "Proof" [and_fold_prop props] in
+            let aux_prf = and_fold_proof prems in
+            let aux_cmd = Defn (str ^ "_aux", aux_typ, aux_prf) in
+            let aux_param = (
+              Some (str ^ "_aux"), aux_typ,
+              { atts_init with definition = Some aux_prf })
+            in
+              glob_ctx_add_param aux_param; Some aux_cmd
+        | _ -> None
+        end
+      end
+    in
 
     let trm_defs = StrMap.filter_map
       (fun str (_,_,atts) ->
@@ -512,33 +541,32 @@ let proof_cmd_cc (cmd : proof_command) : cc_command list =
     in
 
     let args =
-      let rec app_explicit (depth : int) (trm : cc_term) =
-        if depth = 0 then trm else
-        begin match trm with
-        | App (f, t) -> appvar "APP" [app_explicit (depth - 1) f; t]
-        |  _ -> trm
-        end
-      in
       begin match arg_opt with
       | Some ts ->
         let ts' = List.map (eo_cc_term ctx_init []) ts in
+        let t = expand_defs trm_defs (List.hd ts') in
         begin match rule with
           | "cong" ->
-              let t = expand_defs trm_defs (List.hd ts') in
               [t; app_explicit (List.length prems) t]
-          | "and_elim" -> [conv_int_literal (List.hd ts')]
+          | "nary_cong" ->
+              [t; app2_explicit (List.length prems) t]
+          | "and_elim" ->
+              [conv_int_literal (List.hd ts')]
           | _ -> ts'
         end
       | None -> []
       end
     in
 
-    let def = appvar rule (prems @ args) in
+    let def = match aux_cmd_opt with
+      | None   -> appvar rule (prems @ args)
+      | Some _ -> appvar rule (Var (str ^ "_aux") :: args)
+    in
     let def' = infer_term tdata.context trm_defs def in
     let param = (Some str, concl, {atts_init with definition = Some def'}) in
 
     glob_ctx_add_param param;
-    [ Defn (str, concl, def') ]
+    Option.to_list aux_cmd_opt @ [ Defn (str, concl, def') ]
 
   | AssumePush _ -> failwith "undefined"
   | StepPop _ -> failwith "undefined"

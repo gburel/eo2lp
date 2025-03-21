@@ -1,4 +1,10 @@
 (declare-const APP (-> (! Type :var S :implicit) (! Type :var T :implicit) (-> S T) S T))
+(declare-const APP2 (->
+  (! Type :var S :implicit)
+  (! Type :var T :implicit)
+  (! Type :var U :implicit)
+  (-> S T U) S T U))
+
 (declare-const _ (-> (! Type :var S :implicit) (! Type :var T :implicit) (-> S T) S T))
 
 

@@ -1,7 +1,7 @@
 open Ast_cc
 open Ast
 
-let debug_inference = ref false
+let debug_inference = ref true
 
 module IntMap = Map.Make(Int)
 type mvar_context = cc_term IntMap.t

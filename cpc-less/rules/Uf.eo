@@ -114,16 +114,12 @@
 ; return: >
 ;   The right hand side of the equality proven by nary_cong for f and
 ;   the given premises E.
-(program-schema :right-assoc-nil $mk_nary_cong_rhs
+(program $mk_nary_cong_rhs
+  ((U Type) (f (-> U U U)) (s1 U) (s2 U) (t U :list) (tail Bool :list) (nil U))
+    (U Bool) U
     (
-      (T1 Type) (T2 Type) (cons (-> T1 T1 T2)) (nil T2)
-      (s1 T1) (s2 T1) (t T2 :list) (tail Bool :list)
-    )
-    (T2 Bool) T2
-    (
-        (($mk_nary_cong_rhs (cons s1 t) (and (= s1 s2) tail))
-          (eo::cons cons s2 ($mk_nary_cong_rhs t tail)))
-        (($mk_nary_cong_rhs nil true)                       nil)
+      (($mk_nary_cong_rhs (APP2 f s1 t) (and (= s1 s2) tail))  (f s2 ($mk_nary_cong_rhs t tail)))
+      (($mk_nary_cong_rhs nil true)                       nil)
     )
 )
 
@@ -140,10 +136,10 @@
 ; conclusion: >
 ;   An equality between applications of f whose arguments are given
 ;   by the equalities in E.
-(declare-rule nary_cong ((U Type) (E Bool) (t U))
+(declare-rule nary_cong ((U Type) (E Bool) (t1 U) (t2 U))
     :premise-list E and
-    :args (t)
-    :conclusion (= t ($mk_nary_cong_rhs t E))
+    :args (t1 t2)
+    :conclusion (= t1 ($mk_nary_cong_rhs t2 E))
 )
 
 ;;;;; ProofRule::TRUE_INTRO
