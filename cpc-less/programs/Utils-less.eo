@@ -9,7 +9,6 @@
 (declare-const @list (-> (! Type :var T :implicit) T @List @List)
   :right-assoc-nil @list.nil
 )
-; for now, we manually add the rules we need for @list being right-assoc-nil.
 
 (program-schema :right-assoc-nil $singleton_elim
   ((T1 Type) (T2 Type) (x1 T1) (x2 T2 :list) (x T2) (cons (-> T1 T2 T2)) (nil T2))
@@ -17,5 +16,83 @@
   (
     (($singleton_elim (cons x1 x2))  (eo::ite (eo::is_eq x2 nil) x1 (cons x1 x2)))
     (($singleton_elim x)          x)
+  )
+)
+
+; program: $singleton_elim_aci
+; args:
+; - f (-> T U S): The function we are considering.
+; - id S: The nil terminator of f.
+; - s S: The term to process.
+; return: >
+;   The result of applying singleton elimination for s, where s should
+;   be an application of f. In particular, if s is of the form (f x1 x2) where
+;   x2 is the nil terminator of f, then we return x1. Otherwise, we return s
+;   unchanged.
+; note: >
+;   This method is similar in purpose to $singleton_elim, but insists that
+;   the function and its nil terminator are provided explicitly.
+(program-schema :right-assoc-nil $singleton_elim_aci
+  ((T1 Type) (T2 Type) (cons (-> T1 T2 T2)) (nil T2) (x T2) (x1 T1) (x2 T2 :list))
+  ((-> T1 T2 T2) T2 T2) T2
+  (
+    (($singleton_elim_aci cons nil (cons x1 x2))  (eo::ite (eo::is_eq x2 nil) x1 (cons x1 x2)))
+    (($singleton_elim_aci cons nil x)          x)
+  )
+)
+
+; define: $compare_var
+; args:
+; - a T: The first term to compare.
+; - b U: The second term to compare.
+; return: true if a should be considered before b in an ordering where a and b are considered to be atomic variables.
+; note: >
+;   This method is used to have a canonical ordering of variables.
+;   It could potentially be improved by having a builtin operator, e.g. eo::compare.
+;   The variable ordering always returns true for the variable with the lower
+;   hash. This leads to best case performance if sorting a term with distinct
+;   children, where if we ask for the hash of the children in order and prefer
+;   the ones where this compare returns true, then the term remains unchanged.
+(define $compare_var ((T Type :implicit) (U Type :implicit) (a T) (b U)) true)
+
+;; =============== for ACI_NORM associative, commutative and idempotent
+
+; program: $ac_append
+; args:
+; - cons (-> T U S): The function, which is assumed to be associative, commutative, idempotent and has the given identity.
+; - nil S: The nil terminator of f.
+; - s1 S: The first term to process.
+; - s2 S: The second term to process.
+; return: the result of appending the children of two applications s1 and s2 of the ACI operator f.
+(program-schema :right-assoc-nil $ac_append
+  ((T1 Type) (T2 Type) (cons (-> T1 T2 T2)) (nil T2) (x T2) (x1 T1) (x2 T2 :list) (y1 T1) (y2 T2 :list))
+  ((-> T1 T2 T2) T2 T2 T2) T2
+  (
+    (($ac_append cons nil (cons x1 x2) (cons y1 y2)) (eo::ite (eo::is_eq x1 y1)
+                                             ($ac_append cons nil (cons x1 x2) y2)
+                                           (eo::ite ($compare_var x1 y1)
+                                             (eo::cons cons x1 ($ac_append cons nil x2 (cons y1 y2)))
+                                             (eo::cons cons y1 ($ac_append cons nil (cons x1 x2) y2)))))
+    (($ac_append cons nil (cons x1 x2) nil)        (cons x1 x2))
+    (($ac_append cons nil nil (cons y1 y2))        (cons y1 y2))
+    (($ac_append cons nil nil nil)               nil)
+  )
+)
+
+
+; program: $get_aci_norm_rec
+; args:
+; - f (-> T U S): The function, which is assumed to be associative, commutative, idempotent and has the given identity.
+; - id S: The nil terminator of f.
+; - s S: The term to process.
+; return: the result of normalizing s based on ACI reasoning.
+(program-schema :right-assoc-nil $get_aci_norm_rec
+  ((T1 Type) (T2 Type) (cons (-> T1 T2 T2)) (nil T2) (x T2) (x1 T1) (x2 T2 :list))
+  ((-> T1 T2 T2) T2 T2) T2
+  (
+    (($get_aci_norm_rec cons nil (cons nil x2))   ($get_aci_norm_rec cons nil x2))
+    (($get_aci_norm_rec cons nil (cons x1 x2))    ($ac_append cons nil ($get_aci_norm_rec cons nil x1) ($get_aci_norm_rec cons nil x2)))
+    (($get_aci_norm_rec cons nil nil)              nil)
+    (($get_aci_norm_rec cons nil x)               (eo::cons cons x nil))
   )
 )

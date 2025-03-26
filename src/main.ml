@@ -165,9 +165,34 @@ let proc_eo_library (dir : string) : unit =
   end
 
 let prf_paths = [
-    "rodin/smt1468783596909311386.smt2.prf";
-    "rodin/smt3534838651727683253.smt2.prf";
+  "rodin/smt1300175744189082250.smt2.prf";
+  "rodin/smt1468783596909311386.smt2.prf";
+  "rodin/smt2061505268723161891.smt2.prf";
+  "rodin/smt2080745738819601301.smt2.prf";
+  "rodin/smt2325451563592377472.smt2.prf";
+  "rodin/smt249825283571301584.smt2.prf";
+  "rodin/smt2598599073465845145.smt2.prf";
+  "rodin/smt2970577543992530805.smt2.prf";
+  "rodin/smt3166111930664231918.smt2.prf";
+  "rodin/smt3534838651727683253.smt2.prf";
+  "rodin/smt4057580428149921510.smt2.prf";
+  "rodin/smt4458073420585573738.smt2.prf";
+  "rodin/smt5144869669709662262.smt2.prf";
+  "rodin/smt5490086717622526120.smt2.prf";
+  "rodin/smt5801285361354912971.smt2.prf";
+  "rodin/smt5832055835117075398.smt2.prf";
+  "rodin/smt6739662804326223632.smt2.prf";
+  "rodin/smt7452810379672948208.smt2.prf";
+  "rodin/smt7632939434921259240.smt2.prf";
+  "rodin/smt7665342989239969743.smt2.prf";
   ]
+
+let safe_proc_eo_file (fp : string) : unit =
+  try proc_eo_file fp
+  with
+  | e -> Printf.printf
+    "Error processing file %s:\n%s\n"
+      fp (Printexc.to_string e)
 
 let proc_eo_proofs (dir : string) : unit =
   let imports = List.map (fun fp -> normalize_path fp "") eo_lib_paths in
@@ -178,7 +203,8 @@ let proc_eo_proofs (dir : string) : unit =
       tdata.deps
   ) prf_paths;
 
-  List.iter proc_eo_file
+  (* Iterate through proof files, safely processing each one *)
+  List.iter safe_proc_eo_file
     (List.map (Filename.concat dir) prf_paths)
 
 let main : unit =

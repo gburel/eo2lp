@@ -90,7 +90,7 @@ let eo_decl_attr (eo_atts : attr list) : cc_atts =
 
 let rec eo_cc_term (ctx : cc_context) (bvs : param list) (trm : eo_term) : cc_term =
   begin match trm with
-  | Literal l -> Literal l
+  | Literal lit -> Literal lit
 
   | Symbol str ->
     (*TODO. implement Rish's hashmap trick. *)
@@ -471,10 +471,10 @@ let and_fold_proof ts =
 let and_fold_prop ts =
   List.fold_right (fun trm acc -> appvar "and" [trm; acc]) ts (Var "true")
 
-let rec conv_int_literal (lit : cc_term) =
+let rec conv_int_literal (lit : literal) =
   match lit with
-  | Literal (Numeral 0) -> Var ("eo::0")
-  | Literal (Numeral n) -> App (Var "eo::succ",  conv_int_literal (Literal (Numeral (n-1))))
+  | Numeral 0 -> Var ("eo::0")
+  | Numeral n -> App (Var "eo::succ",  conv_int_literal (Numeral (n-1)))
   | _ -> failwith "Term is not a literal numeral."
 
 let rec app_explicit (defs : cc_term StrMap.t) (depth : int) (trm : cc_term)  =
@@ -542,17 +542,19 @@ let proof_cmd_cc (cmd : proof_command) : cc_command list =
 
     let args =
       begin match arg_opt with
-      | Some ts ->
-        let ts' = List.map (eo_cc_term ctx_init []) ts in
-        let t = List.hd ts' in
-        begin match rule with
-          | "cong" ->
-              [t; app_explicit trm_defs (List.length prems) t]
-          | "nary_cong" ->
-              [t; app2_explicit trm_defs (List.length prems) t]
-          | "and_elim" ->
-              [conv_int_literal (List.hd ts')]
-          | _ -> ts'
+      | Some eo_tms ->
+        let tms = List.map (eo_cc_term ctx_init []) eo_tms in
+        (* if integer literals appear, we coerce them all to eo::Int. *)
+        let tms' = List.map (function
+          (Literal l) -> conv_int_literal l
+          | _ as t -> t
+        ) tms in
+        begin match (tms', rule) with
+        | ([t], "cong") ->
+            [t; app_explicit trm_defs (List.length prems) t]
+        | ([t], "nary_cong") ->
+            [t; app2_explicit trm_defs (List.length prems) t]
+        | _ -> tms'
         end
       | None -> []
       end

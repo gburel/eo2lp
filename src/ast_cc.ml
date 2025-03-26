@@ -301,7 +301,6 @@ let mk_pi_nameless (tys : cc_term list) (trm : cc_term) =
 let list_add x xs =
   if List.mem x xs then xs else x :: xs
 
-
 let mk_pi_implicit (xs : param list) (trm : cc_term) =
   let ps = List.map (fun (str_opt, ty, atts) ->
     (str_opt, ty, {atts with implicit = true})) xs

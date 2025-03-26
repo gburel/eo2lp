@@ -2,6 +2,7 @@ admin/
 hs/
 notes/
 lp/
+test/
 
 .ocamlinit
 
