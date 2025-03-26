@@ -102,7 +102,7 @@
 (declare-rule cong ((U Type) (E Bool) (t1 U) (t2 U))
     :premise-list E and
     :args (t1 t2)
-    :conclusion (= t1 ($mk_cong_rhs t2 ($nary_reverse E)))
+    :conclusion (= t1 ($mk_cong_rhs t2 ($nary_reverse and E)))
 )
 
 ;;;;; ProofRule::NARY_CONG

@@ -227,7 +227,8 @@ let rec app_mctx (mctx : mvar_context) (trm : cc_term) (imp : bool) : cc_term =
         app_mctx mctx body imp
       )
 
-let rec unify (ctx : cc_context) (eqs : Equation.t list) (mctx : mvar_context)
+let rec unify (ctx : cc_context) (eqs : Equation.t list)
+  (mctx : mvar_context) (defs : cc_term StrMap.t)
   : mvar_context =
   match eqs with
   | [] -> mctx
@@ -237,7 +238,7 @@ let rec unify (ctx : cc_context) (eqs : Equation.t list) (mctx : mvar_context)
     let u' = whnf ctx (app_mctx mctx u false) in
     let mctx_cs f = List.map (fun (m, t) -> (m, app_mctx f t false)) in
     match (t', u') with
-    | (Meta m, Meta m') when m = m' -> unify ctx js mctx
+    | (Meta m, Meta m') when m = m' -> unify ctx js mctx defs
 
     | (Meta m, _) ->
         if occurs_check m u' then
@@ -248,7 +249,7 @@ let rec unify (ctx : cc_context) (eqs : Equation.t list) (mctx : mvar_context)
             ) mctx
           in
           let mctx' = IntMap.add m u' mctx' in
-          unify ctx (mctx_cs mctx' js) mctx'
+          unify ctx (mctx_cs mctx' js) mctx' defs
 
     | (_, Meta m) ->
         if occurs_check m t' then
@@ -259,27 +260,39 @@ let rec unify (ctx : cc_context) (eqs : Equation.t list) (mctx : mvar_context)
             ) mctx
           in
           let mctx' = IntMap.add m t' mctx' in
-          unify ctx (mctx_cs mctx' js) mctx'
+          unify ctx (mctx_cs mctx' js) mctx' defs
 
     | (App(f1, a1), App(f2, a2)) ->
         (* unify the heads, unify the arguments *)
-        unify ctx ((f1, f2) :: (a1, a2) :: js) mctx
+        unify ctx ((f1, f2) :: (a1, a2) :: js) mctx defs
 
     | (Explicit t, _) ->
-        unify ctx ((t, u') :: js) mctx
+        unify ctx ((t, u') :: js) mctx defs
 
     | (_, Explicit u) ->
-        unify ctx ((t', u) :: js) mctx
+        unify ctx ((t', u) :: js) mctx defs
 
     | (Bind(bb1, (_, tA1, att1), b1), Bind(bb2,(_, tA2, att2), b2))
       when bb1 = bb2 && att1 = att2 ->
-        unify ctx ((tA1, tA2) :: (b1,b2) :: js) mctx
+        unify ctx ((tA1, tA2) :: (b1,b2) :: js) mctx defs
 
     | (Univ u1, Univ u2) when u1 = u2 ->
-        unify ctx js mctx
+        unify ctx js mctx defs
 
     | (Var x, Var y) when x = y ->
-        unify ctx js mctx
+        unify ctx js mctx defs
+
+    | (_, Var str) ->
+      begin match StrMap.find_opt str defs with
+      | Some def -> unify ctx ((t', def) :: js) mctx defs
+      | None -> failwith "Unification failure!"
+      end
+
+    | (Var str, _) ->
+      begin match StrMap.find_opt str defs with
+      | Some def -> unify ctx ((def, t') :: js) mctx defs
+      | None -> failwith "Unification failure!"
+      end
 
     | _ ->
         failwith "Unification failure"
@@ -309,18 +322,11 @@ let infer ctx trm =
     Printf.printf "Found type %s with constraints %s\n"
     (string_of_term typ) (string_of_equations eqs);
 
-  let mctx = unify ctx (EqSet.to_list eqs) IntMap.empty in
+  let mctx = unify ctx (EqSet.to_list eqs) IntMap.empty StrMap.empty in
   if !debug_inference then
     Printf.printf "Found unifier %s\n" (string_of_mctx mctx);
 
   app_mctx mctx typ false
-
-let rec expand_defs (defs : cc_term StrMap.t) (trm : cc_term) : cc_term =
-  map_cc_term (fun _ str ->
-    match StrMap.find_opt str defs with
-    | Some trm -> expand_defs defs trm
-    | None -> Var str
-  ) [] trm
 
 let infer_term ctx defs trm =
   if !debug_inference then
@@ -332,13 +338,13 @@ let infer_term ctx defs trm =
     Printf.printf "Elaborated term to %s\n" (string_of_term trm');
 
   let (typ, eqs) = infer_type ctx mctx trm' in
-  let eqs' = EqSet.map (fun (t,t') ->
-    (expand_defs defs t, expand_defs defs t')) eqs in
+  (* let eqs' = EqSet.map (fun (t,t') ->
+    (expand_defs defs t, expand_defs defs t')) eqs in *)
   if !debug_inference then
     Printf.printf "Found type %s with constraints %s\n"
-    (string_of_term typ) (string_of_equations eqs');
+    (string_of_term typ) (string_of_equations eqs);
 
-  let mctx = unify ctx (EqSet.to_list eqs') IntMap.empty in
+  let mctx = unify ctx (EqSet.to_list eqs) IntMap.empty defs in
   if !debug_inference then
     Printf.printf "Found unifier %s\n" (string_of_mctx mctx);
 

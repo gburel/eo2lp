@@ -39,7 +39,8 @@ def main():
                     "--proof-format-mode=cpc",
                     "--proof-granularity=dsl-rewrite",
                     "--proof-print-conclusion",
-                    "--expr-depth=-1",
+                    # "--expr-depth=-1",
+                    "--proof-dag-global",
                     filename
                 ],
                 stdout=subprocess.PIPE,

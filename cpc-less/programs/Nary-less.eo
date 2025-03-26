@@ -87,10 +87,10 @@
 ;   function, otherwise returns x itself.
 (program-schema :right-assoc-nil $nary_reverse
     ((T1 Type) (x T1) (xs T1 :list) (cons (-> T1 T1 T1)) (nil T1))
-    (T1) T1
+    ((-> T1 T1 T1) T1) T1
     (
-        (($nary_reverse (cons x xs)) ($nary_reverse_rec cons nil (cons x xs) nil))
-        (($nary_reverse x)           x)
+        (($nary_reverse cons (cons x xs)) ($nary_reverse_rec cons nil (cons x xs) nil))
+        (($nary_reverse cons x)           x)
     )
 )
 

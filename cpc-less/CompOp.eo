@@ -162,8 +162,14 @@
     ((T1 Type) (T2 Type) (x T1) (y T1) (ys T2 :list) (cons (-> T1 T2 T2)) (nil T2))
     ((-> T1 T2 T2) T1 T2) T2
     (
-        ((eo::cons cons x nil) (cons x nil))
-        ((eo::cons cons x (cons y ys)) (cons x y ys))
+        (
+          (eo::cons cons x nil)
+          (eo::define ((zs nil :list)) (cons x zs))
+        )
+        (
+          (eo::cons cons x (cons y ys))
+          (eo::define ((zs (cons y ys) :list)) (cons x zs))
+        )
     )
 )
 

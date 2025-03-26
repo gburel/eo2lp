@@ -208,7 +208,7 @@ let rec mk_app ctx bvs f args att_opt =
       let n = List.length args in
       let last = List.nth args (n - 1) in
       let init, start =
-        if is_list_param ctx bvs last (* || nil = last *)
+        if is_list_param ctx bvs last
         then (last, n - 2) else (nil, n - 1)
       in
       let rec aux i r =
@@ -253,6 +253,27 @@ let rec map_cc_term
   | Bind (bb, (str_opt, ty, atts), trm') ->
     let x' = (str_opt, map_cc_term f bvs ty, atts) in
     Bind (bb, x', map_cc_term f (str_opt::bvs) trm')
+
+let unfold (defs : cc_term StrMap.t) (str : string) (trm : cc_term) : cc_term =
+  map_cc_term
+    (fun _ str' ->
+      if str' = str then
+        match StrMap.find_opt str defs with
+        | Some def -> def
+        | None -> Var str'
+      else
+        Var str'
+    )
+    [] trm
+
+let rec unfold_all (defs : cc_term StrMap.t) (trm : cc_term) : cc_term =
+  map_cc_term
+    (fun _ str ->
+      match StrMap.find_opt str defs with
+      | Some def -> unfold_all defs def
+      | None -> Var str
+    )
+    [] trm
 
 let map_cc_rule (f : cc_term -> cc_term) (rs : cc_rule) : cc_rule =
   List.map (fun (l,r) -> (f l, f r)) rs

@@ -477,20 +477,20 @@ let rec conv_int_literal (lit : cc_term) =
   | Literal (Numeral n) -> App (Var "eo::succ",  conv_int_literal (Literal (Numeral (n-1))))
   | _ -> failwith "Term is not a literal numeral."
 
-let rec app_explicit (depth : int) (trm : cc_term) =
+let rec app_explicit (defs : cc_term StrMap.t) (depth : int) (trm : cc_term)  =
   if depth = 0 then trm else
   begin match trm with
-  | App (f, t) -> appvar "APP" [app_explicit (depth - 1) f; t]
-  |  _ -> trm
+  | App (f, t) -> appvar "APP" [app_explicit defs (depth - 1) f; t]
+  | Var str -> app_explicit defs depth (unfold defs str trm)
   end
 
-let rec app2_explicit (depth : int) (trm : cc_term) =
+let rec app2_explicit (defs : cc_term StrMap.t) (depth : int) (trm : cc_term) =
   if depth = 0 then trm else
   begin match trm with
   | App (App (f, t1), t2) ->
-      let t2' = app2_explicit (depth - 1) t2 in
+      let t2' = app2_explicit defs (depth - 1) t2 in
       appvar "APP2" [f; t1; t2']
-  |  _ -> trm
+  | Var str -> app2_explicit defs depth (unfold defs str trm)
   end
 
 let proof_cmd_cc (cmd : proof_command) : cc_command list =
@@ -544,12 +544,12 @@ let proof_cmd_cc (cmd : proof_command) : cc_command list =
       begin match arg_opt with
       | Some ts ->
         let ts' = List.map (eo_cc_term ctx_init []) ts in
-        let t = expand_defs trm_defs (List.hd ts') in
+        let t = List.hd ts' in
         begin match rule with
           | "cong" ->
-              [t; app_explicit (List.length prems) t]
+              [t; app_explicit trm_defs (List.length prems) t]
           | "nary_cong" ->
-              [t; app2_explicit (List.length prems) t]
+              [t; app2_explicit trm_defs (List.length prems) t]
           | "and_elim" ->
               [conv_int_literal (List.hd ts')]
           | _ -> ts'
