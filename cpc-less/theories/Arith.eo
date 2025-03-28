@@ -124,9 +124,3 @@
 (declare-const @arith_vts_delta_free Real)
 (declare-const @arith_vts_infinity (-> (! Type :var T) T))
 (declare-const @arith_vts_infinity_free (-> (! Type :var T) T))
-
-(define foo ((x Bool) (y Int)) 
-   (
-      ite (ite x x x) y y 
-   )
-)
