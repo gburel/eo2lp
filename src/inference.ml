@@ -1,10 +1,16 @@
 open Ast_cc
-open Ast
+open Ast_eo
 
 let debug_inference = ref false
 
 module IntMap = Map.Make(Int)
 type mvar_context = cc_term IntMap.t
+
+let string_of_mctx (mctx : mvar_context) =
+  let to_str = (fun (idx,t) ->
+    Printf.sprintf "?%d ↦ %s" idx (string_of_term t)) in
+  let s = String.concat "; " (List.map to_str (IntMap.to_list mctx)) in
+    Printf.sprintf "⦃ %s ⦄" s
 
 (*
   Implicit variables only come from applications of (free) variables whose types
@@ -48,7 +54,6 @@ let elaborate_term (ctx : cc_context) (trm : cc_term) : (cc_term * mvar_context)
   let trm' = elab_vars ctx [] trm in
   (trm', !mctx)
 
-(* TODO. reimplement using sets rather than lists to avoid constraint duplication*)
 module Equation = struct
   type t = (cc_term * cc_term)
   let compare = compare
@@ -73,12 +78,6 @@ let string_of_lcat (lcat : lit_category) =
   | NUM -> "NUM"
   | RAT -> "RAT"
   | DEC -> "DEC"
-
-let infer_lcat (lit : literal) =
-  match lit with
-  | Numeral _  -> NUM
-  | Rational _ -> RAT
-  | Decimal _  -> DEC
 
 let rec subst (trm : cc_term) (idx : int) (body : cc_term) : cc_term =
   match body with
@@ -109,6 +108,11 @@ let strip_binder ctx trm : (cc_context * cc_term) =
         ) str_opt
   | _ -> (ctx, trm)
 
+let infer_lcat (lit : literal) =
+  match lit with
+  | Numeral _  -> NUM
+  | Rational _ -> RAT
+  | Decimal _  -> DEC
 
 let rec infer_type (ctx : cc_context) (mctx : mvar_context) (trm : cc_term)
   : (cc_term * eq_set) =
@@ -202,12 +206,6 @@ and whnf (ctx : cc_context) (trm : cc_term) : cc_term =
     let body' = whnf ctx body in
     Bind(bb, (x,ty',att), body')
   | _ -> trm
-
-let string_of_mctx (mctx : mvar_context) =
-  let to_str = (fun (idx,t) ->
-    Printf.sprintf "?%d ↦ %s" idx (string_of_term t)) in
-  let s = String.concat "; " (List.map to_str (IntMap.to_list mctx)) in
-    Printf.sprintf "⦃ %s ⦄" s
 
 let rec app_mctx (mctx : mvar_context) (trm : cc_term) (imp : bool) : cc_term =
   match trm with
@@ -338,8 +336,7 @@ let infer_term ctx defs trm =
     Printf.printf "Elaborated term to %s\n" (string_of_term trm');
 
   let (typ, eqs) = infer_type ctx mctx trm' in
-  (* let eqs' = EqSet.map (fun (t,t') ->
-    (expand_defs defs t, expand_defs defs t')) eqs in *)
+
   if !debug_inference then
     Printf.printf "Found type %s with constraints %s\n"
     (string_of_term typ) (string_of_equations eqs);

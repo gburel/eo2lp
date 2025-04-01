@@ -1,4 +1,4 @@
-open Ast
+open Ast_eo
 
 (* ----- Datatypes. ------ *)
 type universe = TYPE | KIND

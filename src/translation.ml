@@ -1,24 +1,10 @@
-open Ast
+open Ast_eo
 open Ast_cc
 open Inference
 
-module Prog = struct
-  type t = eo_var list * (eo_term * eo_term) list
-  let compare = compare
-end
-
-module ProgSet = Set.Make(Prog)
-
-module EOSubst = struct
-  type t = eo_term StrMap.t
-    let compare = compare
-end
-
-module StrMapSet = Set.Make(EOSubst)
-
 type translation_data = {
   mutable eo_progs : ProgSet.t StrMap.t;
-  mutable eo_binop : StrMapSet.t StrMap.t;
+  mutable eo_binop : EoSubstSet.t StrMap.t;
   mutable asserts : int;
   mutable context : cc_context;
   mutable filepath : string;
@@ -52,8 +38,8 @@ let tdata =
       ];
     eo_binop =
       StrMap.of_list [
-        ("right-assoc-nil", StrMapSet.empty);
-        ("left-assoc-nil", StrMapSet.empty);
+        ("right-assoc-nil", EoSubstSet.empty);
+        ("left-assoc-nil", EoSubstSet.empty);
       ];
   }
 
@@ -82,10 +68,10 @@ let ddata_init = {
 
 let ddata = ref ddata_init
 
-let eo_decl_attr (eo_atts : attr list) : cc_atts =
+let eo_decl_attr (atts : attr list) : cc_atts =
   { atts_init with
-      implicit = List.mem_assoc "implicit" eo_atts;
-      list = List.mem_assoc "list" eo_atts;
+      implicit = mem_att atts "implicit";
+      list = mem_att atts "list";
   }
 
 let rec eo_cc_term (ctx : cc_context) (bvs : param list) (trm : eo_term) : cc_term =
@@ -121,16 +107,19 @@ let rec eo_cc_term (ctx : cc_context) (bvs : param list) (trm : eo_term) : cc_te
         end
     end
 
-  | Attributed (trm, reqs, atts) ->
-    begin match reqs with
-    | [] -> eo_cc_term ctx bvs trm
-    | rs -> eo_requires_cc ctx bvs rs (Attributed (trm, [], atts))
+  | Attributed (trm', atts) ->
+    begin match req_atts atts with
+    | [] -> eo_cc_term ctx bvs trm'
+    | rs ->
+      let atts' = List.map (fun (str, tm_opt) -> Attr (str, tm_opt)) (simple_atts atts) in
+      let trm'' = Attributed (trm, atts') in
+      eo_requires_cc ctx bvs rs trm''
     end
 
   | Match (ps, trm, rs) -> eo_match_cc ctx bvs ps trm rs
   end
 
-and eo_var_cc ctx bvs (str,ty,att) : param =
+and typed_param_cc ctx bvs (str,ty,att) : param =
   let x = if str = "_" then None else Some str in
   (x, eo_cc_term ctx bvs ty, eo_decl_attr att)
 
@@ -138,7 +127,7 @@ and eo_define_cc ctx bvs vs trm =
   match vs with
   | [] -> eo_cc_term ctx bvs trm
   | v :: vs' ->
-    let p = eo_var_cc ctx bvs v in
+    let p = typed_param_cc ctx bvs v in
     let trm' = eo_define_cc ctx (p :: bvs) vs' trm in
     Bind (Let, p, trm')
 
@@ -157,7 +146,7 @@ and eo_match_cc ctx bvs ps trm rs =
       Printf.sprintf "%s_match_%d"
       (!ddata.name) (!ddata.matches) in
 
-    let params = List.map (eo_var_cc ctx []) ps in
+    let params = List.map (typed_param_cc ctx []) ps in
     let ctx' = ctx_append_param params ctx in
     let params' = List.map snd (StrMap.to_list ctx') in
     (* Infer types of lhs/rhs of first rule, wrt.
@@ -215,7 +204,7 @@ and eo_arrow_cc ctx bvs args =
   | []        -> failwith "Nothing applied to (->)."
   | [typ]     -> eo_cc_term ctx bvs typ
   | (typ::ts) ->
-    let p = eo_var_cc ctx bvs (mk_eo_var typ) in
+    let p = typed_param_cc ctx bvs (mk_typed_param typ) in
     Bind (Pi, p, eo_arrow_cc ctx (p::bvs) ts)
 
 and eo_cc_rule ctx bvs (lhs,rhs) =
@@ -237,7 +226,7 @@ let att_stem att = List.hd (String.split_on_char ' ' (string_of_attribute att))
 
 let inst_eo_schema ctx (schema : Prog.t) (subst : EOSubst.t)  =
   let (vs, rws) = subst_prog subst schema in
-  let vs' = List.map (eo_var_cc ctx []) vs in
+  let vs' = List.map (typed_param_cc ctx []) vs in
   Rule (vs', List.map (eo_cc_rule (ctx_append_param vs' ctx) []) rws)
 
 
@@ -279,7 +268,7 @@ let base_cmd_cc (cmd : base_command) : cc_command list =
           (* update record of binops *)
           tdata.eo_binop <- StrMap.update "right-assoc-nil"
             (function
-              | Some x -> Some (StrMapSet.add subst x)
+              | Some x -> Some (EoSubstSet.add subst x)
               | _ -> None
             ) tdata.eo_binop;
 
@@ -321,11 +310,11 @@ let eunoia_cmd_cc (cmd : eunoia_command) : cc_command list =
   match cmd with
   (* TODO. check for :type attribute. *)
   | Define (str, vs, trm) ->
-    let rec eo_lambda_cc ctx bvs (vs : eo_var list) body =
+    let rec eo_lambda_cc ctx bvs (vs : typed_param list) body =
       match vs with
       | [] -> eo_cc_term ctx bvs body
       | v::vs' ->
-        let v' = eo_var_cc ctx bvs v in
+        let v' = typed_param_cc ctx bvs v in
         Bind (Lambda, v', eo_lambda_cc ctx (v'::bvs) vs' body)
     in
     let trm' = eo_lambda_cc tdata.context [] vs trm in
@@ -336,7 +325,7 @@ let eunoia_cmd_cc (cmd : eunoia_command) : cc_command list =
     [ Defn (str, typ, trm') ]
 
   | DeclareRule (str, ps, rspec) ->
-    let params = List.map (eo_var_cc ctx_init []) ps in
+    let params = List.map (typed_param_cc ctx_init []) ps in
     let loc_ctx = ctx_append_param params ctx_init in
     let concl = eo_cc_term loc_ctx [] rspec.conclusion in
 
@@ -422,7 +411,7 @@ let eunoia_cmd_cc (cmd : eunoia_command) : cc_command list =
       tdata.deps <- deps'; []
 
   | Program (str, att_str_opt, eo_ps, dom_tys, ran_ty, eo_prog) ->
-    let params = List.map (eo_var_cc ctx_init []) eo_ps in
+    let params = List.map (typed_param_cc ctx_init []) eo_ps in
     let ctx = ctx_append_param params ctx_init in
     let prog_ty_raw = eo_arrow_cc ctx [] (dom_tys @ [ran_ty]) in
     let prog_ty = close_term ctx prog_ty_raw in
@@ -440,7 +429,7 @@ let eunoia_cmd_cc (cmd : eunoia_command) : cc_command list =
       ) tdata.eo_progs;
 
       (* also, instantiate for all constants with attribute given by `att_str`*)
-      let prog_insts = StrMapSet.fold
+      let prog_insts = EoSubstSet.fold
         (fun sub acc -> inst_eo_schema tdata.context (eo_ps, eo_prog) sub :: acc)
         (StrMap.find astr tdata.eo_binop) [] in
 
