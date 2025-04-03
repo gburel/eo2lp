@@ -11,9 +11,8 @@
  (name eo2lp)
  (public_name eo2lp)
  (modules
-   main parser lexer
-   ast_eo ast_cc inference prelude
-   translation encoding
+   parser lexer prelude
+   ast_eo term_cc context_cc
   )
  (flags :standard -w -8)
  (libraries ppx_deriving str ocamlgraph)

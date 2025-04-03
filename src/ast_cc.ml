@@ -1,89 +1,139 @@
-open Ast_eo
+open Term_cc
 
-(* ----- Datatypes. ------ *)
-type universe = TYPE | KIND
-[@@deriving show]
+type context = datum StrMap.t
 
-type cc_binder =
-  | Let
-  | Lambda
-  | Pi
-[@@deriving show]
+(* given a term, create a context for its binding structure *)
+let rec bvars : term -> context =
+  let rec aux xs trm =
+    match trm with
+    | (Univ _|Var _|Meta _|Literal _) -> StrMap.empty
+    | Explicit t -> aux t
+    | Bound i ->
+      begin match List.nth_opt xs i with
+      | Some x -> StrMap.singleton x
+      | None -> StrMap.empty
+      end
+    | App (e1, e2) ->
+        StrMap.union (aux xs e1) (aux xs e2)
+    | Bind (_, (x,dat), t) ->
+        StrMap.union (aux xs dat.typ) (aux ((x,dat)::xs) t)
+  in
+    aux []
 
-type cc_term =
-  | Univ of universe
-  | Literal of literal
-  | Explicit of cc_term
-  | Var of string
-  | Meta of int
-  | Bound of int
-  | App of cc_term * cc_term
-  | Bind of cc_binder * param * cc_term
-and param = string option * cc_term * cc_atts
-and cc_atts = {
-    definition : cc_term option;
-    implicit : bool;
-    list : bool;
-    apply : app_attr option;
-    premise_list : cc_term option;
-  }
-and app_attr =
+let map_bvars : term list -> context =
+  List.fold_left (fun acc tm -> StrMap.union acc (bvars tm)) StrMap.empty
+
+
+let dummy : context = {
+  theory = dummy;
+  data = StrMap.empty;
+  bound_vars = [];
+}
+
+let dummy ty : info = {
+  typ = ty;
+  implicit = false;
+  list = false;
+}
+
+
+
+
+type attribute =
   | RightAssoc
   | LeftAssoc
-  | RightAssocNil of cc_term
-  | LeftAssocNil of cc_term
-  | Chainable of cc_term
-  | Pairwise of cc_term
-  | Binder of cc_term
+  | RightAssocNil of term
+  | LeftAssocNil of term
+  | Chainable of term
+  | Pairwise of term
+  | Binder of term
 
-type cc_context = param StrMap.t
 
-type cc_rule = (cc_term * cc_term) list
+let string_of_attribute att =
+  match att with
+  | RightAssoc -> ":right-assoc"
+  | LeftAssoc -> ":left-assoc"
+  | RightAssocNil trm -> ":right-assoc-nil " ^ string_of_term trm
+  | LeftAssocNil trm -> ":left-assoc-nil " ^ string_of_term trm
+  | Chainable trm -> ":chainable " ^ string_of_term trm
+  | Pairwise trm -> ":pairwise " ^ string_of_term trm
+  | Binder trm -> ":binder " ^ string_of_term trm
+
+let rec filter_vars (xs : binding list) (trm : cc_term) : PSet.t =
+  match trm with
+  | Univ _ -> PSet.empty
+  | Bound _ -> PSet.empty
+  | Var x ->
+    begin match List.find_opt x ctx with
+    | Some p -> PSet.singleton p
+    | None -> PSet.empty
+    end
+  | Meta _ -> PSet.empty
+  | App (e1, e2) ->
+      let f1 = filter_vars ctx e1 in
+      let f2 = filter_vars ctx e2 in
+      PSet.union f1 f2
+  | Bind (_, (_, typ,_), body) ->
+      let ftyp  = filter_vars ctx typ in
+      let fbody = filter_vars ctx body in
+      Pset.union ftyp fbody
+
+
 type cc_command =
   | Const of string * cc_term
   | Defn of string * cc_term * cc_term
   | Prog of string * cc_term
-  | Rule of param list * cc_rule
+  | Rule of rw_rule
   | LitTy of lit_category * cc_term
+and rw_rule = info StrMap.t * (cc_term * cc_term) list
 
-(* ------ Utilities ------ *)
-let atts_init = {
-  definition = None;
-  implicit = false;
-  list = false;
-  apply = None;
-  premise_list = None;
+module StrSet = Set.Make(String)
+
+type theory = {
+  id : string;
+  parents : StrSet.t;
+  commands : cc_command list;
+  notation : attribute StrMap.t;
+  rule_schema : (rw_rule list) StrMap.t
 }
 
-let is_univ trm = match trm with
-  | Univ _ -> true
-  | _ -> false
+let dummy : theory = {
+  id = "";
+  parents = StrSet.empty;
+  commands = [];
+  notation = StrMap.empty;
+  rule_schema = StrMap.empty;
+}
 
-let is_var trm = match trm with
-  | (Var _|Bound _|Meta _) -> true
-  | _ -> false
+type context = {
+  theory : theory;
+  parameters : datum StrMap.t;
+  bound_vars : (string * info) list
+}
+
+
+
+let merge_ctx ctx ctx' : context =
+  if ctx.theory = ctx'.theory then
+    {
+      ctx with
+        parameters = StrMap.union (fun _ a _ -> Some a) ctx.parameters ctx'.parameters;
+        bound_vars = ctx.bound_vars @ ctx'.bound_vars;
+    }
+  else
+    failwith "Cannot merge contexts from different theories."
+
+let extend_ctx ctx (str,typ) : context =
+  { ctx with parameters = StrMap.add str typ ctx.parameters }
+
+(* ------ Utilities ------ *)
 
 let var = fun x -> Var x
+
+(* deprecated *)
 let param_var (str_opt,_,_) =
   Option.fold ~none:(Var "BLANK") ~some:(fun str -> Var str) str_opt
 
-let ctx_init = StrMap.empty
-
-let ctx_join (c1 : cc_context) (c2 : cc_context) : cc_context =
-  StrMap.union (fun _ p _ -> Some p) c1 c2
-
-let mk_param (str : string) (ty : cc_term) : param =
-  (Some str, ty, atts_init)
-
-let ctx_add str typ ctx = StrMap.add str (mk_param str typ) ctx
-
-let ctx_add_param ((str_opt, _, _) as p) ctx =
-  match str_opt with
-  | Some str -> StrMap.add str p ctx
-  | None -> failwith "Cannot add nameless parameter to context."
-
-let ctx_append_param params ctx =
-  List.fold_left (fun acc p -> ctx_add_param p acc) ctx params
 
 (* let param_var ((_,_) : param) =
   match x_opt with
@@ -92,9 +142,7 @@ let ctx_append_param params ctx =
 
 
 
-let is_binder bb trm = match trm with
-  | Bind (bb', _, _) -> bb = bb'
-  | _ -> false
+
 
 let lookup_param_opt (ctx : cc_context) (str : string) : param option =
   StrMap.find_opt str ctx
@@ -131,10 +179,8 @@ let string_of_lcat lcat =
 let lookup_lit (ctx : cc_context) (lcat : lit_category) =
   StrMap.find_opt (string_of_lcat lcat) ctx
 
-let app : cc_term -> cc_term list -> cc_term =
-  List.fold_left (fun acc y -> App (acc, y))
 
-let appvar str = app (Var str)
+
 
 let mk_chain (f : cc_term) (agg : cc_term) (args : cc_term list) : cc_term =
   let rec chain_up args =
@@ -242,17 +288,6 @@ let rec mk_app ctx bvs f args att_opt =
   | Some (Pairwise agg) -> mk_pairwise f agg args
 
 
-let rec map_cc_term
-  (f : string option list -> string -> cc_term)
-  (bvs : string option list) (trm : cc_term)
-  = match trm with
-  | (Univ _|Meta _|Bound _|Literal _) -> trm
-  | Explicit t -> Explicit (map_cc_term f bvs t)
-  | Var x -> f bvs x
-  | App (t1,t2) -> App (map_cc_term f bvs t1, map_cc_term f bvs t2)
-  | Bind (bb, (str_opt, ty, atts), trm') ->
-    let x' = (str_opt, map_cc_term f bvs ty, atts) in
-    Bind (bb, x', map_cc_term f (str_opt::bvs) trm')
 
 let unfold (defs : cc_term StrMap.t) (str : string) (trm : cc_term) : cc_term =
   map_cc_term
@@ -278,22 +313,6 @@ let rec unfold_all (defs : cc_term StrMap.t) (trm : cc_term) : cc_term =
 let map_cc_rule (f : cc_term -> cc_term) (rs : cc_rule) : cc_rule =
   List.map (fun (l,r) -> (f l, f r)) rs
 
-let mk_bounds (xs : string option list) (trm : cc_term) =
-  map_cc_term (fun bvs str ->
-    match List.find_index (fun x -> x = Some str) bvs with
-    | Some i -> Bound i
-    | None -> Var str
-  ) xs trm
-
-let mk_pi (xs : param list) (trm : cc_term) =
-  let rec aux bvs (ys : param list) trm : cc_term =
-    match ys with
-    | [] -> mk_bounds bvs trm
-    | (str_opt, ty,atts)::ys' ->
-    Bind (Pi, (str_opt, mk_bounds bvs ty, atts), aux (str_opt::bvs) ys' trm)
-  in
-    aux [] xs trm
-
 let mk_pi_nameless (tys : cc_term list) (trm : cc_term) =
   let ps = List.map (fun ty -> (None, ty, atts_init)) tys
   in mk_pi ps trm
@@ -314,50 +333,10 @@ module Param = struct
   let compare = compare
 end
 
-module ParamSet = Set.Make(Param)
-type param_set = ParamSet.t
 
-let rec bvars (bvs : param list) (trm : cc_term) : param_set =
-  match trm with
-  | Univ _ -> ParamSet.empty
-  | Bound i ->
-    begin match List.nth_opt bvs i with
-    | Some x -> ParamSet.singleton x
-    | None -> ParamSet.empty
-    end
-  | Var _ -> ParamSet.empty
-  | Meta _ -> ParamSet.empty
-  | App (e1, e2) ->
-      ParamSet.union (bvars bvs e1) (bvars bvs e2)
-  | Bind (_, ((_, typ,_) as p), body) ->
-      ParamSet.union (bvars bvs typ) (bvars (p::bvs) body)
 
-let bvars_list bvs t = ParamSet.to_list (bvars bvs t)
 
-let map_bvars (bvs : param list) (ts : cc_term list) =
-  List.fold_left (fun vs t -> ParamSet.union (bvars bvs t) vs) ParamSet.empty ts
 
-let map_bvars_list (bvs : param list) (trms : cc_term list) : param list =
-  ParamSet.to_list (map_bvars bvs trms)
-
-let rec filter_vars (ctx : cc_context) (trm : cc_term) : param_set =
-  match trm with
-  | Univ _ -> ParamSet.empty
-  | Bound _ -> ParamSet.empty
-  | Var x ->
-    begin match StrMap.find_opt x ctx with
-    | Some p -> ParamSet.singleton p
-    | None -> ParamSet.empty
-    end
-  | Meta _ -> ParamSet.empty
-  | App (e1, e2) ->
-      let f1 = filter_vars ctx e1 in
-      let f2 = filter_vars ctx e2 in
-      ParamSet.union f1 f2
-  | Bind (_, (_, typ,_), body) ->
-      let ftyp  = filter_vars ctx typ in
-      let fbody = filter_vars ctx body in
-      ParamSet.union ftyp fbody
 
 let filter_vars_list (ctx : cc_context) (trm : cc_term) : param list =
   ParamSet.to_list (filter_vars ctx trm)
@@ -379,73 +358,6 @@ let rec close_term (ctx : cc_context) (trm : cc_term) : cc_term =
 
 
 (* ----- Pretty printing. ------ *)
-let dprintf b fmt =
-  if b then Printf.printf fmt
-
-let string_of_binder bb =
-  match bb with
-  | Let -> "let"
-  | Lambda -> "λ"
-  | Pi -> "Π"
-
-let string_of_literal l =
-  match l with
-  | Numeral x -> Printf.sprintf "%d" x
-  | Decimal x -> Printf.sprintf "%f" x
-  | Rational x -> Printf.sprintf "%d/%d" (fst x) (snd x)
-
-let string_of_var (x_opt : string option) =
-  Option.fold ~none:"_" ~some:(fun x -> x) x_opt
-
-
-let rec string_of_term' (bvs : (string option) list) (t : cc_term) =
-  match t with
-  | Univ KIND -> "KIND"
-  | Univ TYPE -> "TYPE"
-  | Literal l -> string_of_literal l
-  | Explicit t -> "[" ^ string_of_term' bvs t ^ "]"
-  | Var x -> "!" ^ x
-  | Meta x -> "?" ^ (string_of_int x)
-  | Bound i -> (* Printf.sprintf "b%d" i *)
-    begin match List.nth_opt bvs i with
-    | Some x -> string_of_var x
-    | None   -> Printf.sprintf "b%d" i
-    end
-  | App (e1, ((Bound _|Meta _|Var _|Literal _|Explicit _) as x)) ->
-      string_of_term' bvs e1 ^ " " ^ string_of_term' bvs x
-  | App(e1,e2) ->
-      string_of_term' bvs e1 ^ " " ^ "(" ^ string_of_term' bvs (e2) ^ ")"
-  | Bind(Let, (x,x_def,_), t') ->
-      Printf.sprintf "let (%s ≡ %s) in %s"
-      (string_of_var x) (string_of_term' bvs x_def)
-      (string_of_term' (x::bvs) t')
-  | Bind(bb, ((x,_,_) as p), t') ->
-      Printf.sprintf "%s %s. %s"
-        (string_of_binder bb) (string_of_param bvs p)
-        (string_of_term' (x::bvs) t')
-
-and string_of_attribute att =
-  match att with
-  | RightAssoc -> ":right-assoc"
-  | LeftAssoc -> ":left-assoc"
-  | RightAssocNil trm -> ":right-assoc-nil " ^ string_of_term trm
-  | LeftAssocNil trm -> ":left-assoc-nil " ^ string_of_term trm
-  | Chainable trm -> ":chainable " ^ string_of_term trm
-  | Pairwise trm -> ":pairwise " ^ string_of_term trm
-  | Binder trm -> ":binder " ^ string_of_term trm
-
-and string_of_param bvs (x,ty,atts) =
-  let typ_str =
-    Printf.sprintf "%s : %s"
-    (string_of_var x) (string_of_term' bvs ty)
-  in
-  match (atts.implicit, atts.list) with
-  | (true, true) -> Printf.sprintf "⟦%s⟧" typ_str
-  | (true, false) -> Printf.sprintf "[%s]" typ_str
-  | (false, true) -> Printf.sprintf "⦇%s⦈" typ_str
-  | (false, false) -> Printf.sprintf "(%s)"typ_str
-
-and string_of_term t = string_of_term' [] t
 
 let string_of_rule (l,r) =
   Printf.sprintf "%s ↪ %s"
