@@ -1,6 +1,12 @@
 open Ast
 open Ast_cc
+<<<<<<< HEAD
 open Translation
+=======
+open Sys
+open Translate_trm
+open Translate_cmd
+>>>>>>> fa94640fd902d2d92fdbd1c60102fbc6c111bbb8
 open Encoding
 
 open Sys
@@ -9,6 +15,7 @@ let debug_encode = ref false
 
 let string_of_strset str =
     StrSet.fold (fun str acc -> Printf.sprintf "%s, %s" str acc) str ""
+
 let string_of_strmap = StrMap.iter
   (fun str x -> Printf.printf "%s ~~> {%s}\n" str (string_of_strset x))
 

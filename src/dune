@@ -11,9 +11,14 @@
  (name eo2lp)
  (public_name eo2lp)
  (modules
+<<<<<<< HEAD
    main parser lexer
    ast ast_cc inference
    translation encoding
+=======
+   parser lexer prelude
+   ast_eo term_cc context_cc
+>>>>>>> fa94640fd902d2d92fdbd1c60102fbc6c111bbb8
   )
  (flags :standard -w -8)
  (libraries str)
