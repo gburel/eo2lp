@@ -1,0 +1,108 @@
+% The improvements:
+%
+% 1. Theorem-like environments that use the counter of another
+% theorem-like environment do not also use the name of that other
+% environment for \autoref.  (As a side effect, they also get more
+% appropriate link names used for internal hyperlinks.)
+%
+% 2. The \Autoref command is like \autoref,  except it makes sure the
+% first character it typesets is capitalized.
+%
+% 3. The idiotic capitalization is fixed in the settings for equation,
+% figure, table, part, appendix, and theorem.
+
+\RequirePackage{hyperref}
+
+% When \jbwfha@fix@currentHref is invoked on the value of
+% \@currentHref, it replaces the part to the left of the first period
+% with the value of \jbwfha@currenttheoremtype.
+
+\def\jbwfha@fix@currentHref#1.#2\jbwfha@sentinel{\xdef\@currentHref{\jbwfha@currenttheoremtype.#2}}
+
+% We wrap \hyper@makecurrent so that afterward the entity type in
+% \@currentHref is replaced by \jbwfha@currenttheoremtype if it is
+% defined.  Then we undefine \jbwfha@currenttheoremtype.
+
+\let\jbwfha@original@hyper@makecurrent=\hyper@makecurrent
+\def\hyper@makecurrent#1%
+  {\jbwfha@original@hyper@makecurrent{#1}%
+   \ifx\jbwfha@currenttheoremtype\relax\else
+     \expandafter\jbwfha@fix@currentHref\@currentHref\jbwfha@sentinel
+     \global\let\jbwfha@currenttheoremtype=\relax
+   \fi}
+
+% We wrap \@thm so that it first copies the value of \@currenvir into
+% \jbwfha@currenttheoremtype.  We do this with \AtBeginDocument in
+% case \@thm is overridden by other packages loaded later.
+
+\AtBeginDocument
+  {\let\jbwfha@original@thm=\@thm
+   \def\@thm
+     {\global\let\jbwfha@currenttheoremtype=\@currenvir
+      \jbwfha@original@thm}}
+
+\global\let\jbwfha@currenttheoremtype=\relax
+
+\let\jbwfha@case=\relax
+
+% original comment for much older hyperref version:
+%
+% We completely replace \test@reftype with more sensible code.  The
+% changes are:
+% 1. We do something more reasonable if both #1autorefname and #1name
+% are undefined.
+% 2. We arrange for the control sequence \jbwfha@case to be prefixed
+% to the value of \@currentHtag.  We also make sure that the entity
+% type name which follows has been macro-expanded.  (\jbwfha@case will
+% later either capitalize the first letter of the entity type name or
+% do nothing.)
+
+% in hyperref version [2007/02/07 v6.75r]:
+% 1. \@currentHtag seems to have been renamed to \HyRef@currentHtag
+% 2. \test@reftype seems to have been renamed to \HyRef@testreftype
+%
+% So we extend the code to work in both versions.
+
+\def\test@reftype#1.#2\\%
+  {\@ifundefined{#1autorefname}
+     {\@ifundefined{#1name}
+        {\ifx!#1!%
+           \@latex@warning{no text name for #1 at \the\inputlineno, using UNIT}%
+           \def\jbwfha@unittype{UNIT}%
+         \else
+           \def\jbwfha@unittype{#1}%
+         \fi}
+        {\edef\jbwfha@unittype{\csname#1name\endcsname}}}
+     {\edef\jbwfha@unittype{\csname#1autorefname\endcsname}}%
+   % *** This might be doing more expansion than the original code,
+   % which passes the values through just one \edef.  Hopefully it is
+   % safe in practice.
+   \edef\@currentHtag{\noexpand\jbwfha@case\jbwfha@unittype\noexpand~}%
+   \let\HyRef@currentHtag=\@currentHtag}
+
+\let\HyRef@testreftype=\test@reftype
+
+% \Autoref is like \autoref except it makes sure the first character
+% it typesets is capitalized.
+
+\newcommand{\Autoref}[1]%
+  {\begingroup
+     \def\jbwfha@case##1{\uppercase{##1}}%
+     \autoref{#1}%
+   \endgroup}
+
+% We override bad case defaults that were set in hyperref.sty.
+
+\def\equationautorefname{equation}
+\def\figureautorefname{figure}
+\def\tableautorefname{table}
+\def\partautorefname{part}
+\def\appendixautorefname{appendix}
+\def\theoremautorefname{theorem}
+
+% Supply some additional defaults.
+
+\def\subsectionautorefname{section}
+\def\subsubsectionautorefname{section}
+\def\definitionautorefname{definition}
+\def\lemmaautorefname{lemma}
