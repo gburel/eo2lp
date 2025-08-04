@@ -1,8 +1,9 @@
 open Ast
 open Ast_cc
-open Sys
 open Translation
 open Encoding
+
+open Sys
 
 let debug_encode = ref false
 
