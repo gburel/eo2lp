@@ -1,16 +1,19 @@
-open Prelude
+type literal =
+  | Numeral of int
+  | Rational of (int * int)
+  | Decimal of float
+[@@deriving show]
 
 type eo_term =
   | Literal of literal
   | Symbol of string
   | AppList of string * eo_term list
-  | Define of typed_param list * eo_term
-  | Match of typed_param list * eo_term * (eo_term * eo_term) list
-  | Attributed of eo_term * attr list
-and typed_param = string * eo_term * attr list
-and attr =
-  | Attr of string * eo_term option
-  | Requires of (eo_term * eo_term)
+  | Define of eo_var list * eo_term
+  | Match of eo_var list * eo_term * (eo_term * eo_term) list
+  | Attributed of eo_term * req_attr list * attr list
+and eo_var = string * eo_term * attr list
+and attr = string * eo_term option
+and req_attr = (eo_term * eo_term)
 [@@deriving show]
 
 type eo_rule = (eo_term * eo_term) list
@@ -30,22 +33,22 @@ type base_command =
 | DeclareDatatypes of sort_decl list * datatype_decl list
 | DeclareType of string * eo_term list (*SMT3*)
 | DefineType of string * eo_term list * eo_term (*SMT3*)
-and function_def = string * typed_param list * eo_term * eo_term
+and function_def = string * eo_var list * eo_term * eo_term
 and datatype_decl = constructor_decl list
-and fun_decl = string * typed_param list * eo_term
+and fun_decl = string * eo_var list * eo_term
 and sort_decl = string * int
 and selector_decl  = string * eo_term
 and constructor_decl = string * selector_decl list
 [@@deriving show]
 
 type eunoia_command =
-| Define of string * typed_param list * eo_term
-| DeclareRule of string * typed_param list * rule_spec
+| Define of string * eo_var list * eo_term
+| DeclareRule of string * eo_var list * rule_spec
 | DeclareConsts of lit_category * eo_term
-| DeclareParamConst of string * typed_param list * eo_term * attr list
+| DeclareParamConst of string * eo_var list * eo_term * attr list
 | DeclareOracleFun of string * eo_term list * eo_term * string
 | Include of string
-| Program of string * string option * typed_param list * eo_term list * eo_term * (eo_term * eo_term) list
+| Program of string * string option * eo_var list * eo_term list * eo_term * (eo_term * eo_term) list
 | Reference of string * string option
 and rule_spec = {
   assumes : eo_term option;
@@ -55,8 +58,10 @@ and rule_spec = {
   conclusion : eo_term;
   attrs : attr list }
 and premises =
-  | PremiseList of eo_term * eo_term
+  | PremiseList of eo_term * eo_term (*this is wrong????*)
   | Premises of eo_term list
+and lit_category =
+  | STR | NUM | DEC | RAT | BIN | HEX
 [@@deriving show]
 
 (* Eunoia commands that produce props *)
@@ -87,6 +92,7 @@ type control_command =
   | SetInfo of attr
   | SetLogic of string
   | SetOption of string
+
 [@@deriving show]
 
 type eo_command =
@@ -128,42 +134,28 @@ type eo_sig = eo_command list
 type eo_file = string * eo_sig
 type eo_library = eo_file list
 
-(* -------- Basic utilities --------------- *)
-
 let is_symbol (trm : eo_term) =
   match trm with
   | Symbol _ -> true
   | _ -> false
 
-let simple_atts (atts : attr list) = List.filter_map
-  (function Attr (str,tm_opt) -> Some (str,tm_opt) | _ -> None) atts
+let is_implicit (atts : attr list) =
+  Option.is_some (List.assoc_opt "implicit" atts)
 
-let req_atts (atts : attr list) = List.filter_map
-  (function Attr _ -> None | Requires (tm1,tm2) -> Some (tm1,tm2)) atts
+let is_list (atts : attr list) =
+  Option.is_some (List.assoc_opt "list" atts)
 
-
-
-let find_att_opt (atts : attr list) (str : string) =
-  Option.join (List.assoc_opt str (simple_atts atts))
-
-let mem_att (atts : attr list) (str : string) =
-  List.mem_assoc str (simple_atts atts)
-
-(* deprecated. *)
-let atts_has_list (atts : attr list) = mem_att atts "list"
-let atts_has_implicit (atts : attr list) = mem_att atts "implicit"
-
-let mk_typed_param ty =
+let mk_eo_var ty =
   match ty with
-  | Attributed (ty', atts) ->
-    begin match find_att_opt atts "var" with
+  | Attributed (ty', _, atts) ->
+    begin match Option.join (List.assoc_opt "var" atts) with
     | None -> ("_", ty', atts)
-    | Some (Symbol str) -> (str, ty', atts)
+    | Some (Symbol str) ->
+      (str, ty', atts)
     end
   | _ -> ("_", ty, [])
 
-
-(* ------- hacky Eunoia program schemas ------- *)
+module StrMap = Map.Make(String)
 
 let rec subst_trm (sub : eo_term StrMap.t) (trm : eo_term) =
   match trm with
@@ -192,19 +184,14 @@ let rec subst_trm (sub : eo_term StrMap.t) (trm : eo_term) =
     let rws' = subst_rule sub rws in
     Match (vs', t', rws')
 
-  | Attributed (t, atts) -> Attributed (subst_trm sub t, subst_atts sub atts)
-
-and subst_atts sub atts =
-  List.map (function
-    | Attr (str, Some trm) -> Attr (str, Some (subst_trm sub trm))
-    | Attr (str, None) -> Attr (str, None)
-    | Requires (tm1, tm2) -> Requires (subst_trm sub tm1 , subst_trm sub tm2)
-  ) atts
+  | Attributed (t, reqs, atts) ->
+    let reqs' = List.map (fun (l,r) -> (subst_trm sub l, subst_trm sub r)) reqs in
+    Attributed (subst_trm sub t, reqs', atts)
 
 and subst_rule sub rws =
   List.map (fun (lhs, rhs) -> (subst_trm sub lhs, subst_trm sub rhs)) rws
 
-let subst_prog (sub : eo_term StrMap.t) ((vs, rw) : typed_param list * eo_rule) =
+let subst_prog (sub : eo_term StrMap.t) ((vs, rw) : eo_var list * eo_rule) =
   (* Remove domain of substituion from parameter list, apply substituion in types. *)
   let vs' =
     List.filter_map (fun (str, ty, atts) ->
@@ -218,28 +205,11 @@ let rec eo_binop_tys typ =
   match typ with
   | AppList ("->", t1 :: t2 :: tys) ->
     begin match t1 with
-    | Attributed (_,atts) when mem_att atts "implicit" ->
-      Printf.printf "warning! binary operator with implicit argument.";
+    | Attributed (_,_,atts) when is_implicit atts ->
       eo_binop_tys (AppList ("->", t2 :: tys))
     | _ -> (t1,t2)
     end
   | _ -> failwith "Not the type of a binary operator."
-
-module Prog = struct
-  type t = typed_param list * (eo_term * eo_term) list
-  let compare = compare
-end
-
-module ProgSet = Set.Make(Prog)
-
-module EoSubst = struct
-  type t = eo_term StrMap.t
-  let compare = compare
-end
-
-module EoSubstSet = Set.Make(EoSubst)
-
-
 
 (* in SMT3 but not Eunoia.
   | Import of string list
@@ -253,12 +223,12 @@ module EoSubstSet = Set.Make(EoSubst)
 *)
 
 (* in Eunoia but not SMT3
-  | DeclareRule of string * typed_param list * assm option * prems option * args option * reqs option * eo_term
+  | DeclareRule of string * eo_var list * assm option * prems option * args option * reqs option * eo_term
   | DeclareConsts of lit_category * eo_term
-  | DeclareParamConst of string * typed_param list * eo_term * attr list
+  | DeclareParamConst of string * eo_var list * eo_term * attr list
   | DeclareOracleFun of string * eo_term list * eo_term * string
   | Include of string
-  | Program of string * typed_param list * eo_term list * eo_term * (eo_term * eo_term) list
+  | Program of string * eo_var list * eo_term list * eo_term * (eo_term * eo_term) list
   | Reference of string * string option
 
 *)

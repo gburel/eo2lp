@@ -1,6 +1,5 @@
-open Ast_eo
+open Ast
 open Ast_cc
-open Translate_trm
 
 type lp_univ = Set | Prop
 type lp_binder = Pi | Lambda | Let
