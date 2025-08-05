@@ -1,0 +1,43 @@
+% custom environment for subfigures
+\newenvironment{cmdsubfig}[2]{%
+	\begin{subfigure}[t]{\textwidth}
+		\subcaption{\label{#1}#2}
+		\captionsetup{subrefformat=parens}
+		\centering
+		\vspace{1mm}
+		}{%
+		\vspace{1mm}
+	\end{subfigure}
+}
+
+% font faces
+\newcommand{\msf}{\mathsf}
+\newcommand{\mbf}{\mathbf}
+\newcommand{\mscr}{\mathscr}
+\newcommand{\mtt}[1]{{\color{MaterialPink500}{\texttt{#1}}}}
+\newcommand{\mcomment}[1]{\color{MaterialIndigo500}{\text{#1}}}
+\newcommand{\paren}[1]{{\color{MaterialGrey600}{\lparen}}{#1}{\color{MaterialGrey600}{\rparen}}}
+
+% ----- abstract syntax ----------
+% plurality, binding
+\newcommand{\plur}[2]{{#1}_{1}, \ldots, {#1}_{#2}}
+\newcommand{\binddot}[3]{{#1\,#2.\,#3}}
+% variables
+\newcommand{\var}[1]{\msf{v}_{\msf{#1}}}
+% binders
+\newcommand{\lam}{\binddot{\msf{λ}}}
+\newcommand{\pii}{\binddot{\msf{Π}}}
+\newcommand{\lett}[2]{\msf{let}\ \paren{#1}\,\msf{in}\ #2}
+% applications
+\newcommand{\appSym}{\cdot}
+\newcommand{\app}[2]{{#1}\appSym{#2}}
+\newcommand{\apptwo}[3]{#1\,#2\,#3}
+\newcommand{\appthree}[4]{#1\,#2\,#3\,#4}
+\newcommand{\appfour}[5]{#1\,#2\,#3\,#4\,#5}
+\newcommand{\appldots}[3]{((\app{#1}{#2})\,\ldots\,{#3})}
+% universes
+\newcommand{\PROP}{\mtt{prop}}
+\newcommand{\TYPE}{\mtt{type}}
+\newcommand{\KIND}{\mtt{kind}}
+% sets for syntactic categories
+\newcommand{\Term}{\msf{Term}}
