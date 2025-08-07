@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass{llncs}
 
 \usepackage{ebproof}
 \usepackage{array}
@@ -12,12 +12,11 @@
 \usepackage{jbw-boxfigure}
 \usepackage{jbw-fix-hyperref-autoref}
 
-% \setmathfont{NewCMMath-Regular.otf}
-
-\title{
+\title{%
   Automatically Translating Proof Systems
-  for SMT Solvers to the $\lambda\Pi$-calculus}
+  for SMT Solvers to the λΠ-calculus}
 \author{Ciarán Dunne, Guillaume Burel}
+\institute{INRIA, ENS Paris-Saclay}
 
 \usepackage[backend=biber]{biblatex}
 \addbibresource{inria.bib}
@@ -105,25 +104,46 @@ The overall architecture of our method is as follows:
 	{Syntax for terms, contexts, judgements of $λΠ^\ast$.}
 	\label{fig:term-syntax}
 	$$
-		\begin{array}
-			{r@{\ ⦂ \ }l@{\quad}r@{\qquad}r@{\ ⦂ \ }l@{\quad}r@{}}
-			%
-			x,y,z & \var 0 ∣ \var 1 ∣ \var 2 ∣ \ldots
-			      & \mcomment{(variables)}
-			      &
-			%
-			u     & \TYPE \mid \KIND
-			      & \mcomment{(universes)}
-			\\
-			%
-			e, t  &
-			\multicolumn{4}{@{}l@{}}{
-			x ∣ u ∣ \paren{\app{t_1}{t_2}}
-			∣ \paren{\lam{x : t_1}{t_2}}
-			∣ \paren{\pii{x : t_1}{t_2}}
-			∣ \paren{\lett{x ≔ t_1}{t_2}}
-			}
-			      & \mcomment{(terms)}
+		\begin{array}[t]{c@{\quad}c}
+			\begin{array}[t]
+				{r@{\ }l@{\quad}l}
+				%!----------------------------------------!%
+				x,y,z & {⦂}\ \var 0 ∣ \var 1 ∣ \var 2 ∣ \ldots
+				      & \mcomment{(variables)}                 \\[2mm]
+				%------------------------------------------%
+				e, t  &
+				\begin{array}[t]{c@{\ }l}
+					{⦂} & x ∣ u ∣ \paren{\app{t_1}{t_2}} \\
+					∣   & \paren{\alam{ν}{x : t_1}{t_2}} \\
+					∣   & \paren{\apii{ν}{x : t_1}{t_2}} \\
+					∣   & \paren{\lett{x ≔ t_1}{t_2}}    \\
+				\end{array}
+				      & \mcomment{(terms)}
+				%!----------------------------------------!%
+			\end{array}
+			 &
+			\begin{array}[t]
+				{r@{\ }l@{\quad}l}
+				%------------------------------------------%
+				u & {⦂}\ {\TYPE ∣ \KIND}
+				  & \mcomment{(universes)}           \\[2mm]
+				%------------------------------------------%
+				ν &
+				\begin{array}[t]{c@{\ }l}
+					{⦂} & \mtt{implicit} \\
+					∣   & \mtt{list}
+				\end{array}
+				  & \mcomment{(variable attributes)}
+				% \\
+				%------------------------------------------%
+				% α &
+				% \begin{array}[t]{c@{\ }l}
+				% 	{⦂} & \mtt{right-assoc-nil}\paren{t} \\
+				% 	∣   & \mtt{left-assoc}
+				% \end{array}
+				%   & \mcomment{(constant attributes)}
+				% %------------------------------------------%
+			\end{array}
 		\end{array}
 	$$
 	\hrule
@@ -165,6 +185,15 @@ A \emph{context} consists of a list $Γ$ of context elements,
 and a \emph{judgement} $\paren{Γ ⊢ γ}$ consists of a context and a context element.
 %
 
+\newcommand{\attr}{\msf{attr}}
+\Autoref{fig:attr-syntax} defines two grammars for \emph{attributes}.
+Variables and constants may be annotated by attributes within
+terms and contexts, which has the effect of constraining
+a global function $\attr$ such that:
+
+% $\attr(x)$ is a variable attribute when $x$ is a variable, and
+% $\attr(κ)$ is a constant attribute when $κ$ is a constant.
+
 \begin{boxfigure}[t]{fig:attr-syntax}
 	{Syntax for application modifiers and variable attributes.}
 	$$
@@ -181,11 +210,6 @@ and a \emph{judgement} $\paren{Γ ⊢ γ}$ consists of a context and a context e
 			  & \mid                   &
 			\msf{Chainable}\paren{t} \mid
 			\msf{Pairwise}\paren{t}
-		\end{array}
-		\quad
-		\begin{array}[t]{r@{\ }c@{\ }l@{\quad}r}
-			ν & ⦂    & \msf{Implicit} & \mcomment{(attributes)} \\
-			  & \mid & \msf{List}
 		\end{array}
 	$$
 \end{boxfigure}
