@@ -100,9 +100,8 @@ The overall architecture of our method is as follows:
 %
 
 % TODO. fix \typecolon. seperate grammar for judgements, rewrite rules, signatures, ...
-\begin{boxfigure}[t!]{}
+\begin{boxfigure}[t!]{fig:term-syntax}
 	{Syntax for terms, contexts, judgements of $λΠ^\ast$.}
-	\label{fig:term-syntax}
 	$$
 		\begin{array}[t]{c@{\quad}c}
 			\begin{array}[t]
@@ -131,7 +130,8 @@ The overall architecture of our method is as follows:
 				ν &
 				\begin{array}[t]{c@{\ }l}
 					{⦂} & \mtt{implicit} \\
-					∣   & \mtt{list}
+					∣   & \mtt{list}     \\
+					∣   & \mtt{null}
 				\end{array}
 				  & \mcomment{(variable attributes)}
 				% \\
@@ -195,21 +195,34 @@ a global function $\attr$ such that:
 % $\attr(κ)$ is a constant attribute when $κ$ is a constant.
 
 \begin{boxfigure}[t]{fig:attr-syntax}
-	{Syntax for application modifiers and variable attributes.}
+	{Syntax for signatures and constant attributes.}
+
 	$$
 		\begin{array}[t]{r@{\ }c@{\ }l@{\quad}r}
-			α & ⦂                      &
-			\msf{RightAssoc} \mid
-			\msf{RightAssocNil}\paren{t}
-			  & \mcomment{(modifiers)}
+			δ & {⦂}
+			  & \paren{\msf{symbol}\ {x}\ \paren{\plur ρ n}\ \paren{{∷}\ t}\ \paren{{≔}\ t'}}
+			  & \mcomment{(declarations)}
 			\\
-			  & \mid                   &
-			\msf{LeftAssoc} \mid
-			\msf{LeftAssocNil}\paren{t}
+			  & {∣}
+			  & \paren{\msf{rule}\ \paren{\plur r n}}
+		\end{array}
+	$$
+	\hrule
+	$$
+		\begin{array}[t]{r@{\ }c@{\ }l@{\quad}r}
+			α & ⦂                                &
+			\mtt{right-assoc} \mid
+			\mtt{right-assoc-nil}\paren{t}
+			  & \mcomment{(constant attributes)}
 			\\
-			  & \mid                   &
-			\msf{Chainable}\paren{t} \mid
-			\msf{Pairwise}\paren{t}
+			  & \mid                             &
+			\mtt{left-assoc} \mid
+			\mtt{left-assoc-nil}\paren{t}
+			\\
+			  & \mid                             &
+			\mtt{chainable}\paren{t} ∣
+			\mtt{pairwise}\paren{t} ∣
+			\mtt{null}
 		\end{array}
 	$$
 \end{boxfigure}
