@@ -96,6 +96,8 @@ The overall architecture of our method is as follows:
 
 \section{Interpreting Eunoia in the λΠ-calculus}
 
+\newcommand{\kon}[1]{\msf{k}_{\msf{#1}}}
+
 \subsection{Terms, Judgements, and Inferences}
 %
 
@@ -104,18 +106,18 @@ The overall architecture of our method is as follows:
 	{Syntax for terms, contexts, judgements of $λΠ^\ast$.}
 	$$
 		\begin{array}[t]{c@{\quad}c}
-			\begin{array}[t]
-				{r@{\ }l@{\quad}l}
+			\begin{array}[t]{r@{\ }l@{\quad}l}
 				%!----------------------------------------!%
 				x,y,z & {⦂}\ \var 0 ∣ \var 1 ∣ \var 2 ∣ \ldots
-				      & \mcomment{(variables)}                 \\[2mm]
+				      & \mcomment{(variables)}                 \\[1mm]
+
 				%------------------------------------------%
 				e, t  &
 				\begin{array}[t]{c@{\ }l}
-					{⦂} & x ∣ u ∣ \paren{\app{t_1}{t_2}} \\
-					∣   & \paren{\alam{ν}{x : t_1}{t_2}} \\
-					∣   & \paren{\apii{ν}{x : t_1}{t_2}} \\
-					∣   & \paren{\lett{x ≔ t_1}{t_2}}    \\
+					{⦂} & x ∣ u ∣ \paren{\app{e}{\paren{\plur t n}}} \\
+					∣   & \paren{\lett{x ≔ t}{e}}                    \\
+					∣   & \paren{\alam{ν}{x : t}{e}}                 \\
+					∣   & \paren{\apii{ν}{x : t}{e}}                 \\
 				\end{array}
 				      & \mcomment{(terms)}
 				%!----------------------------------------!%
@@ -125,7 +127,7 @@ The overall architecture of our method is as follows:
 				{r@{\ }l@{\quad}l}
 				%------------------------------------------%
 				u & {⦂}\ {\TYPE ∣ \KIND}
-				  & \mcomment{(universes)}           \\[2mm]
+				  & \mcomment{(universes)}       \\[1mm]
 				%------------------------------------------%
 				ν &
 				\begin{array}[t]{c@{\ }l}
@@ -133,15 +135,14 @@ The overall architecture of our method is as follows:
 					∣   & \mtt{list}     \\
 					∣   & \mtt{null}
 				\end{array}
-				  & \mcomment{(variable attributes)}
-				% \\
+				  & \mcomment{(var. attributes)}
+				% \\[2mm]
 				%------------------------------------------%
-				% α &
+				% ρ &
 				% \begin{array}[t]{c@{\ }l}
-				% 	{⦂} & \mtt{right-assoc-nil}\paren{t} \\
-				% 	∣   & \mtt{left-assoc}
+				% 	{⦂} & ((x : t) ∷ ν)
 				% \end{array}
-				%   & \mcomment{(constant attributes)}
+				%   & \mcomment{(parameters)}
 				% %------------------------------------------%
 			\end{array}
 		\end{array}
@@ -154,10 +155,9 @@ The overall architecture of our method is as follows:
 			\multicolumn{4}{@{}l@{}}{
 			\paren{t_1 : t_2}
 			\mid \paren{\paren{t_1 ≡ t_2} : t_3}
-			\mid \paren{t_1 ↪ t_2}
 			}
 			  & \mcomment{(context elements)}
-			\\
+			\\[1mm]
 			Γ & \plur γ n
 			  & \mcomment{(contexts)}
 			  &
@@ -173,56 +173,79 @@ non-terminal $t$ with the production rules given in \autoref{fig:term-syntax}.
 Each term is either a \emph{variable},
 a \emph{universe} from the set $\{ \TYPE, \KIND \}$,
 an \emph{application} of two terms $\paren{\app{t_1}{t_2}}$,
-a \emph{abstraction} $\paren{\binddot{\mscr B} {x : t_1} {t_2}}$,
+a \emph{local definition} $\paren{\lett{x ≔ t_1}{t_2}}$,
+or an \emph{abstraction} $\paren{\binddot{\mscr{B}^{ν}}{x : t_1}{t_2}}$,
 where $\mscr{B}$ is a \emph{binder} from the set of symbols $\{ λ, Π \}$,
-or a \emph{local definition} $\paren{\lett{x ≔ t_1}{t_2}}$.
+and $ν$ is a \emph{variable attribute}.
+
+
 %
 A \emph{context element} is either a \emph{typing} $\paren{t_1 : t_2}$,
 a \emph{(typed) equality} $\paren{\paren{t_1 ≡ t_2} : t_3}$,
 or a \emph{rewrite rule} $\paren{t_1 ↪ t_2}$.
 %
-A \emph{context} consists of a list $Γ$ of context elements,
-and a \emph{judgement} $\paren{Γ ⊢ γ}$ consists of a context and a context element.
+A \emph{context} consists of a list $Γ$ of context elements, and
+a \emph{judgement} $\paren{Γ ⊢ γ}$ consists of a context and a context element.
 %
 
 \newcommand{\attr}{\msf{attr}}
 \Autoref{fig:attr-syntax} defines two grammars for \emph{attributes}.
-Variables and constants may be annotated by attributes within
-terms and contexts, which has the effect of constraining
-a global function $\attr$ such that:
 
 % $\attr(x)$ is a variable attribute when $x$ is a variable, and
 % $\attr(κ)$ is a constant attribute when $κ$ is a constant.
+\newcommand{\decl}[4]{\msf{decl}\,{#1}\,{#2}\,{#3}\,{#4}}
+\newcommand{\defn}[3]{\msf{defn}\,{#1}\,{#2}\,{#3}}
+\newcommand{\prog}[4]{\msf{prog}\,{#1}\,{#2}\,{#3}\,{#4}}
+\newcommand{\irule}[5]{\msf{rule}\,{#1}\,{#2}\,{#3}\,{#4}\,{#5}}
 
 \begin{boxfigure}[t]{fig:attr-syntax}
 	{Syntax for signatures and constant attributes.}
-
+	%
 	$$
-		\begin{array}[t]{r@{\ }c@{\ }l@{\quad}r}
-			δ & {⦂}
-			  & \paren{\msf{symbol}\ {x}\ \paren{\plur ρ n}\ \paren{{∷}\ t}\ \paren{{≔}\ t'}}
-			  & \mcomment{(declarations)}
-			\\
-			  & {∣}
-			  & \paren{\msf{rule}\ \paren{\plur r n}}
+		\begin{array}[t]{r@{\ }l@{\quad}l}
+			ρ &
+			{⦂}\ \paren{x ∷ \paren{t,ν}}\quad\mcomment{(parameters)}\qquad
+			r ⦂ \paren{t ↪ t'}
+			  & \mcomment{(rewrite clauses)}     \\[1mm]
+			%
+			α &
+			\begin{array}[t]{c@{\ }l}
+				{⦂}  &
+				\mtt{right-assoc} \mid
+				\mtt{right-assoc-nil}\paren{t}
+				\\
+				\mid &
+				\mtt{left-assoc} \mid
+				\mtt{left-assoc-nil}\paren{t}
+				\\
+				\mid &
+				\mtt{chainable}\paren{t} ∣
+				\mtt{pairwise}\paren{t} ∣
+				\mtt{null}
+			\end{array}
+			  & \mcomment{(constant attributes)} \\[5mm]
+			%
 		\end{array}
 	$$
 	\hrule
-	$$
-		\begin{array}[t]{r@{\ }c@{\ }l@{\quad}r}
-			α & ⦂                                &
-			\mtt{right-assoc} \mid
-			\mtt{right-assoc-nil}\paren{t}
-			  & \mcomment{(constant attributes)}
-			\\
-			  & \mid                             &
-			\mtt{left-assoc} \mid
-			\mtt{left-assoc-nil}\paren{t}
-			\\
-			  & \mid                             &
-			\mtt{chainable}\paren{t} ∣
-			\mtt{pairwise}\paren{t} ∣
-			\mtt{null}
+	$$\begin{array}{r@{\ }l@{\quad}l}
+			δ &
+			\begin{array}[t]{c@{\ }l}
+				{⦂} & \paren{\decl{x}{\paren{\vec ρ}}{\paren{{:}\ t}}{\paren{{∷}\ α}}}
+				∣ \paren{\defn{x}{\paren{{≔}\ t}}{\paren{{:}\ t'}}}                    \\
+				{∣} & \paren{\prog{x}
+				{\paren{\vec ρ}}
+				{\paren{{:}\ {\paren{t_1 \ldots t_n} → t'}}}
+				{\paren{r_1 \ldots r_m}}
+				}                                                                      \\
+				{∣} & \paren{\irule{x}
+					{\paren{\vec ρ}}
+					{\paren{φ_1 \ldots φ_n}}
+					{\paren{t_1 \ldots t_m}}
+					{\paren{ψ}}
+				}
+			\end{array}
+			  & \mcomment{(declarations)}
 		\end{array}
 	$$
 \end{boxfigure}
