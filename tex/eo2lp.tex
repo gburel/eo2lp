@@ -101,7 +101,11 @@ The overall architecture of our method is as follows:
 \subsection{Terms, Judgements, and Inferences}
 %
 
-% TODO. fix \typecolon. seperate grammar for judgements, rewrite rules, signatures, ...
+% TODO.
+%  grammar for eunoia concrete syntax.
+%  deep embedding of eunoia concrete term syntax in dedukti.
+%  ocaml tool translates eo signatures to lp signatures.
+%  lp rewrite rules perform the encoding?
 \begin{boxfigure}[t!]{fig:term-syntax}
 	{Abstract syntax for Eunoia terms, contexts, and judgements.}
 	$$
@@ -274,6 +278,88 @@ a list of terms $\plur φ n$ called \emph{premises},
 a list of terms $t_1, \ldots, t_n$ called \emph{argument patterns},
 and a \emph{conclusion} $ψ$.
 
+\begin{boxfigure}[t]{fig:sig-syntax}
+	{Concrete syntax for Eunoia.}
+	%
+	$$
+		\begin{array}[t]{r@{\ }l}
+			\msf{⟨eo‐command⟩}
+			 &
+			\begin{array}[t]{c@{\ }l}
+				{⩴} &
+				\paren{\mtt{declare-const}\ x\ t\ α}
+				\\
+				{∣} & \paren{\mtt{declare-consts}\ ℓ\ t}
+				\\
+				{∣} &
+				\paren{\mtt{declare-parameterized-const}\ x\ {\vec ρ}\ t\ α}
+				\\
+				{∣} &
+				{\color{MaterialGrey600}{\big\lparen}}
+				\mtt{declare-rule}\ x\ \any{ρ}\
+				\\ & \quad
+				\maybe{\mtt{:assumption}\,t}\
+				\\ & \quad
+				\maybe{\mtt{:premises}\,\any{φ}}\
+				\\ & \quad
+				\maybe{\mtt{:args}\,\any{t}}\
+				\\ & \quad
+				\maybe{\mtt{:requires}\,{\many{t,t'}}}\
+				\\ & \quad
+				\mtt{:conclusion}\,{ψ}
+					{\color{MaterialGrey600}{\big\rparen}}
+				\\
+				{∣} &
+				\paren{\mtt{declare-type}\ {x}\ \paren{\any t}}
+				\\
+				{∣} &
+				\paren{\mtt{define}\ {x}
+				\ \maybe{\vec ρ}
+				\ t\
+				\ \maybe{\mtt{:type}\,t}}
+				\\
+				{∣} &
+				\paren{\mtt{define-type}\ {x}
+				\ \paren{\any t}
+				\ t'}
+				\\
+				{∣} &
+				\paren{\mtt{include}\ \some{\msf{string}}}
+				\\
+				{∣} &
+				\paren{\mtt{program}\ x
+					\ \any{ρ}
+					\ \some{\mtt{:signature}\,\paren{\many{t}}\,t'}
+					\ \paren{\many{t\ t'}}
+				}
+			\end{array}
+		\end{array}
+	$$
+
+	$$\begin{array}[t]{r@{\ }l}
+			\msf{⟨eo‐proof⟩}
+			 &
+			\begin{array}[t]{c@{\ }l}
+				{⩴} & \paren{\mtt{assume}\ x\ t}
+				\\
+				{∣} & \paren{\mtt{assume-push}\ x\ t}
+				\\
+				{∣} & \paren{\mtt{step}\ x\ \maybe{t}\
+				\paren{\mtt{:rule}\ x_r}\
+				\maybe{\mtt{:premises}\ {\vec φ}}\
+				\maybe{\mtt{:args}\ {\vec t}}
+				}
+				\\
+				{∣} & \paren{\mtt{step-pop}\ x\ \maybe{t}\
+				\paren{\mtt{:rule}\ {x_r}}\
+				\maybe{\mtt{:premises}\ {\vec φ}}\
+				\maybe{\mtt{:args}\ {\vec t}}
+				}
+			\end{array}
+		\end{array}
+	$$
+\end{boxfigure}
+%
 
 \printbibliography
 
