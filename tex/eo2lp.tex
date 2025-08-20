@@ -109,64 +109,33 @@ The overall architecture of our method is as follows:
 \begin{boxfigure}[t!]{fig:term-syntax}
 	{Abstract syntax for Eunoia terms, contexts, and judgements.}
 	$$
-		\begin{array}[t]{c@{\quad}c}
-			\begin{array}[t]{r@{\ }l@{\quad}l}
-				%!----------------------------------------!%
-				x,y,z & {⦂}\ \var 0 ∣ \var 1 ∣ \var 2 ∣ \ldots
-				      & \mcomment{(variables)}                 \\[1mm]
-
-				%------------------------------------------%
-				e, t  &
-				\begin{array}[t]{c@{\ }l}
-					{⦂} & x ∣ u ∣ \paren{\app{e}{\paren{\plur t n}}} \\
-					∣   & \paren{\lett{x ≔ t}{e}}                    \\
-					∣   & \paren{\alam{ν}{x : t}{e}}                 \\
-					∣   & \paren{\apii{ν}{x : t}{e}}                 \\
-				\end{array}
-				      & \mcomment{(terms)}
-				%!----------------------------------------!%
-			\end{array}
-			 &
-			\begin{array}[t]
-				{r@{\ }l@{\quad}l}
-				%------------------------------------------%
-				u & {⦂}\ {\TYPE ∣ \KIND}
-				  & \mcomment{(universes)}       \\[1mm]
-				%------------------------------------------%
-				ν &
-				\begin{array}[t]{c@{\ }l}
-					{⦂} & \mtt{implicit} \\
-					∣   & \mtt{list}     \\
-					∣   & \mtt{null}
-				\end{array}
-				  & \mcomment{(var. attributes)}
-				% \\[2mm]
-				%------------------------------------------%
-				% ρ &
-				% \begin{array}[t]{c@{\ }l}
-				% 	{⦂} & ((x : t) ∷ ν)
-				% \end{array}
-				%   & \mcomment{(parameters)}
-				% %------------------------------------------%
-			\end{array}
-		\end{array}
-	$$
-	\hrule
-	\vspace{2mm}
-	$$
-		\begin{array}{r@{\ ⦂ \ }l@{\quad}r@{\qquad}r@{\ ⦂ \ }l@{\quad}r@{}}
-			γ &
-			\multicolumn{4}{@{}l@{}}{
-			\paren{t_1 : t_2}
-			\mid \paren{\paren{t_1 ≡ t_2} : t_3}
-			}
-			  & \mcomment{(context elements)}
+		\begin{array}[t]{r@{\ }l@{\quad}l@{\qquad}r@{\ }l@{\quad}l}
+			%!----------------------------------------!%
+			s & {⦂}\ \sym 0 ∣ \sym 1 ∣ \ldots
+			  & \mcomment{(symbols)}                  &
+			e & {⦂}\ s \mid \paren{{s}\,\many{e}}
+			  & \mcomment{(terms)}
 			\\[1mm]
-			Γ & \plur γ n
-			  & \mcomment{(contexts)}
+			ν & {⦂}\ \mtt{:implicit} \mid \mtt{:list}
+			  & \mcomment{(var. attributes)}          &
+			ρ & {⦂}\ \paren{s\ e\ \maybe{ν}}\qquad
+			  & \mcomment{(parameters)}
+			\\[1mm]
+			α &
+			\multicolumn{4}{@{}l}{
+				\begin{array}[t]{@{}l@{\ }l@{\quad}r}
+					{⦂} &
+					\mtt{:right-assoc} ∣ \mtt{:right-assoc-nil}\some{t} \\
+					{∣} &
+					\mtt{:left-assoc} ∣ \mtt{:left-assoc-nil}\some{t}   \\
+					{∣} &
+					\mtt{:chainable}\some{s} ∣
+					\mtt{:pairwise}\some{s} ∣
+					\mtt{:binder}\some{s}
+				\end{array}
+			}
 			  &
-			j & Γ ⊢ γ
-			  & \mcomment{(judgements)}
+			\mcomment{(const. attributes)}
 		\end{array}
 	$$
 \end{boxfigure}
@@ -199,57 +168,6 @@ a \emph{judgement} $\paren{Γ ⊢ γ}$ consists of a context and a context eleme
 \newcommand{\prog}[4]{\msf{prog}\,{#1}\,{#2}\,{#3}\,{#4}}
 \newcommand{\irule}[5]{\msf{rule}\,{#1}\,{#2}\,{#3}\,{#4}\,{#5}}
 
-\begin{boxfigure}[t]{fig:sig-syntax}
-	{Abstract syntax for Eunoia signature declarations.}
-	%
-	$$
-		\begin{array}[t]{r@{\ }l@{\quad}l}
-			ρ &
-			{⦂}\ \paren{x ∷ \paren{t,ν}}\quad\mcomment{(parameters)}\qquad
-			r ⦂ \paren{t ↪ t'}
-			  & \mcomment{(rewrite clauses)}   \\[1mm]
-			%
-			α &
-			\begin{array}[t]{c@{\ }l}
-				{⦂}  &
-				\mtt{right-assoc} \mid
-				\mtt{right-assoc-nil}\paren{t}
-				\\
-				\mid &
-				\mtt{left-assoc} \mid
-				\mtt{left-assoc-nil}\paren{t}
-				\\
-				\mid &
-				\mtt{chainable}\paren{t} ∣
-				\mtt{pairwise}\paren{t} ∣
-				\mtt{null}
-			\end{array}
-			  & \mcomment{(const. attributes)} \\[5mm]
-			%
-		\end{array}
-	$$
-	\hrule
-	$$\begin{array}{r@{\ }l@{\quad}l}
-			δ &
-			\begin{array}[t]{c@{\ }l}
-				{⦂} & \paren{\decl{x}{\paren{\vec ρ}}{\paren{{:}\ t}}{\paren{{∷}\ α}}}
-				∣ \paren{\defn{x}{\paren{\vec ρ}}{\paren{{≔}\ t}}{\paren{{:}\ t'}}}    \\
-				{∣} & \paren{\prog{x}
-				{\paren{\vec ρ}}
-				{\paren{{:}\ {\paren{t_1 \ldots t_n} → t'}}}
-				{\paren{r_1 \ldots r_m}}
-				}                                                                      \\
-				{∣} & \paren{\irule{x}
-					{\paren{\vec ρ}}
-					{\paren{φ_1 \ldots φ_n}}
-					{\paren{t_1 \ldots t_m}}
-					{\paren{ψ}}
-				}
-			\end{array}
-			  & \mcomment{(declarations)}
-		\end{array}
-	$$
-\end{boxfigure}
 %
 \Autoref{fig:sig-syntax} defines abstract syntax for
 Eunoia signatures and their declarations.
@@ -332,12 +250,15 @@ and a \emph{conclusion} $ψ$.
 					\ \some{\mtt{:signature}\,\paren{\many{t}}\,t'}
 					\ \paren{\many{t\ t'}}
 				}
+				\\
+				{∣} &
+				\some{\msf{prf‐command}}
 			\end{array}
 		\end{array}
 	$$
 
 	$$\begin{array}[t]{r@{\ }l}
-			\msf{⟨eo‐proof⟩}
+			\msf{⟨prf‐command⟩}
 			 &
 			\begin{array}[t]{c@{\ }l}
 				{⩴} & \paren{\mtt{assume}\ x\ t}
@@ -364,3 +285,44 @@ and a \emph{conclusion} $ψ$.
 \printbibliography
 
 \end{document}
+
+
+% \hrule
+% \vspace{2mm}
+% $$
+% 	\begin{array}{r@{\ ⦂ \ }l@{\quad}r@{\qquad}r@{\ ⦂ \ }l@{\quad}r@{}}
+% 		γ &
+% 		\multicolumn{4}{@{}l@{}}{
+% 		\paren{t_1 : t_2}
+% 		\mid \paren{\paren{t_1 ≡ t_2} : t_3}
+% 		}
+% 		  & \mcomment{(context elements)}
+% 		\\[1mm]
+% 		Γ & \plur γ n
+% 		  & \mcomment{(contexts)}
+% 		  &
+% 		j & Γ ⊢ γ
+% 		  & \mcomment{(judgements)}
+% 	\end{array}
+% $$
+% 	\hrule
+% $$\begin{array}{r@{\ }l@{\quad}l}
+% 		δ &
+% 		\begin{array}[t]{c@{\ }l}
+% 			{⦂} & \paren{\decl{x}{\paren{\vec ρ}}{\paren{{:}\ t}}{\paren{{∷}\ α}}}
+% 			∣ \paren{\defn{x}{\paren{\vec ρ}}{\paren{{≔}\ t}}{\paren{{:}\ t'}}}    \\
+% 			{∣} & \paren{\prog{x}
+% 			{\paren{\vec ρ}}
+% 			{\paren{{:}\ {\paren{t_1 \ldots t_n} → t'}}}
+% 			{\paren{r_1 \ldots r_m}}
+% 			}                                                                      \\
+% 			{∣} & \paren{\irule{x}
+% 				{\paren{\vec ρ}}
+% 				{\paren{φ_1 \ldots φ_n}}
+% 				{\paren{t_1 \ldots t_m}}
+% 				{\paren{ψ}}
+% 			}
+% 		\end{array}
+% 		  & \mcomment{(declarations)}
+% 	\end{array}
+% $$
