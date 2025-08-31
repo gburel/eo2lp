@@ -1,0 +1,324 @@
+\documentclass[lualatex, compress, 12pt]{beamer}
+\usetheme{Arguelles}
+
+\usepackage{xcolor}
+\usepackage{ebproof}
+\usepackage{unicode-math-input}
+\usepackage{MnSymbol}
+\usepackage{stmaryrd}
+\usepackage{mathtools}
+\usepackage{amssymb}
+
+\usepackage{listings}
+\usepackage{array}
+% \newfontfamily\Alegreya{Alegreya-Regular.otf}[
+%   BoldFont=Alegreya-Bold.otf,
+%   ItalicFont=Alegreya-Italic.otf,
+%   BoldItalicFont=Alegreya-BoldItalic.otf]
+
+\title{Eunoia to LambdaPi}
+\author{Ciarán Dunne and Guillaume Burel}
+\institute{ENS Paris-Saclay, INRIA}
+
+\lstdefinelanguage{smtlib}{
+    morekeywords={
+        assert, check-sat, check-sat-assuming, echo, exit,
+        get-assertions, get-assignment, get-info, get-model, get-option,
+        get-proof, get-unsat-assumptions, get-unsat-core, get-value,
+        pop, push, reset, reset-assertions, set-info, set-logic, set-option,
+        declare-const, define-const,
+        declare-fun, define-fun, define-fun-rec,
+        declare-sort, define-sort,
+        declare-type, define-type,
+        declare-rule, program,
+        assume, step, par, unknown
+    },
+    alsoletter={-, +,-,*,/,=,>,<,>=,<=,=>},
+    extendedchars=true,
+    sensitive=true,
+    morecomment=[l]{;},  % Line comments start with ;
+    morestring=[b]",      % Strings are enclosed in "
+    morestring=[b]|,      % Symbols are enclosed in |
+    morekeywords=[2]{ite, distinct, true, false, not, or, and, xor, forall, exists, choose, lambda, let, as}, % logic keywords
+    morekeywords=[3]{Type, Bool, Int, Real, List, BitVec, FloatingPoint},  % types
+    morekeywords=[4]{+,-,*,/,=,>,<,>=,<=,=>},  % infix operators
+    morekeywords=[5]{sat, unsat},
+    commentstyle=\color{gray},        % Comment color
+    keywordstyle=\color{blue},        % Keyword color
+    keywordstyle=[2]\color{purple},   % Control keywords color
+    keywordstyle=[3]\color{teal},     % Data types color
+    keywordstyle=[4]\color{red},      % Logical operators color
+    keywordstyle=[5]\color{magenta},
+    stringstyle=\color{violet},       % String color
+    numberstyle=\color{violet},       % Numeric constants color
+    basicstyle=\ttfamily\footnotesize,             % Use a monospaced font
+    moredelim=[is][\itshape]{|}{|},   % Enclose symbols in vertical bars in italics
+    numbers=left,                     % Line numbers on the left
+    numberstyle=\tiny\color{gray},    % Line numbers style
+    stepnumber=1,                     % Line numbers step
+    escapeinside={(*@}{@*)},          % Allow LaTeX inside listings
+    showstringspaces=false,           % Do not display spaces as underscores
+    breaklines=false,                   % Automatically break long lines
+    keepspaces=true,
+    showlines=false,
+    mathescape=true,
+    numberblanklines=false
+}
+
+% For inline SMT-LIB code
+\newcommand{\smt}[1]{\lstinline[language=smtlib]{#1}}
+\newcommand{\exxample}{{\mediumfont\itshape{\textcolor{oc-green-9}{Example.} }}}
+\setbeamercolor*{structure}{fg=oc-indigo-5}
+\lstset{language=smtlib}
+
+\newcommand{\binddot}[3]{#1\,#2.\,#3}
+\newcommand{\plur}[2]{{#1}_{1}, \ldots, {#1}_{#2}}
+
+\newcommand{\msf}{\mathsf}
+\newcommand{\mbf}{\mathbf}
+
+\newcommand{\ar}{\msf{ar}}
+\newcommand{\Sort}{\msf{Sort}}
+\newcommand{\Rank}{\msf{Rank}}
+\newcommand{\Var}{\msf{Var}}
+
+\newcommand{\Bool}{\mbf{Bool}}
+\newcommand{\true}{\msf{true}}
+\newcommand{\false}{\msf{false}}
+
+\newcommand{\mtt}[1]{{\color{magenta}\texttt{#1}}}
+\newcommand{\sat}{\mtt{sat}}
+\newcommand{\unsat}{\mtt{unsat}}
+
+\newcommand{\all}{\binddot∀}
+\newcommand{\exi}{\binddot∃}
+\newcommand{\nexi}{\binddot∄}
+
+\newcommand{\TYPE}{\mtt{type}}
+\newcommand{\PROP}{\mtt{prop}}
+\newcommand{\KIND}{\mtt{kind}}
+\newcommand{\lam}{\binddot{λ}}
+\newcommand{\pii}{\binddot{Π}}
+\newcommand{\lift}[1]{⦉#1⦊}
+
+\newcommand{\Term}{\msf{Term}}
+\newcommand{\lett}[2]{\mbf{let}\ #1\ \mbf{in}\ #2}
+
+\newcommand{\norm}[1]{}
+
+\newcommand{\TermGrammar}{
+  \begin{array}{l@{\ }r@{\ \ }l@{\quad}l}
+    t ∈ \Term(Σ)
+    & ⩴ & x & \textit{variables}
+  \\
+    & ∣ & f(\plur t n) & \textit{function app.}
+  \\
+    & ∣ & f^σ(\plur t n) & \textit{sorted function app.}
+  \\
+    & ∣ & \all {x : σ} t & \textit{universal quantification}
+  \\
+    & ∣ & \exi {x : σ} t & \textit{existential quantification}
+  \\
+    & ∣ & \lett {x ≔ t_1} {t_2} & \textit{local definition}
+  \end{array}
+}
+
+\newcommand{\eval}[1]{\llbracket\,#1\,\rrbracket }
+\newcommand{\gtext}[1]{\text{{\color{gray}#1}}}
+\newcommand{\lp}{\msf{lp}}
+
+\begin{document}
+
+\frame[plain]{\titlepage}
+
+\section{Background}
+
+\begin{frame}[fragile]{Background}
+	\begin{itemize}
+		\item<+-> \alert{Satisfiability modulo theories} (SMT) refers to the area
+		      of automated reasoning aimed at solving (first-order) satisfiability
+		      problems within various mathematical theories.
+		      %
+		\item<+-> \alert{SMT-LIB} (v2.7) is a formal language
+		      used for satisfiability problems and specification
+		      of theories.
+	\end{itemize}
+	%
+	\begin{uncoverenv}<+->
+		\exxample
+		Find $x,y ∈ ℤ$ such that $(x + 2y) = 20$ and $(x - y) = 2$.
+		\begin{lstlisting}
+(set-logic QF_LIA)
+(declare-const x Int)
+(declare-const y Int)
+(assert (= (+ x (* 2 y)) 20))
+(assert (= (- x y) 2))
+(check-sat)
+(exit)\end{lstlisting}\end{uncoverenv}
+\end{frame}
+
+
+\begin{frame}[fragile]
+	\begin{itemize}
+		\item[]<+->{For satisfiable specifications,
+		      \texttt{cvc5} produces an \alert{assignment} for the
+		      uninterpreted symbols of the input problem.}
+	\end{itemize}
+	\begin{uncoverenv}<+->
+		\exxample
+		\begin{lstlisting}
+(set-logic QF_LIA)
+(set-option :produce-models true)
+(declare-const x Int)
+(declare-const y Int)
+(assert (= (+ x (* 2 y)) 20))
+(assert (= (- x y) 2))
+(check-sat)
+(get-model)
+(exit)\end{lstlisting}
+		\hrule
+		\begin{lstlisting}
+sat
+(
+  (define-fun x () Int 8)
+  (define-fun y () Int 6)
+)\end{lstlisting}
+
+	\end{uncoverenv}
+\end{frame}
+
+\begin{frame}[fragile]
+	\begin{itemize}
+		\item[]<+-> \hspace{-5mm}Some SMT solvers produce \alert{proofs}
+		      for unsatisfiable problems.
+	\end{itemize}
+	\begin{uncoverenv}<+->
+		\exxample
+		\begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
+(set-logic QF_UF)
+(set-option :produce-proofs true)
+(declare-const p Bool)
+(assert (and p (not p)))
+(check-sat)
+(get-proof)
+(exit)\end{lstlisting}
+		\hrule
+		\begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
+unsat
+(declare-fun p () Bool)
+(assume @p1 (and p (not p)))
+(step @p2 :rule and_elim :premises (@p1) :args (1))
+(step @p3 :rule and_elim :premises (@p1) :args (0))
+(step @p4 false :rule contra :premises (@p3 @p2))\end{lstlisting}
+	\end{uncoverenv}
+\end{frame}
+
+\newcommand{\cpc}{\mathsf{CPC}}
+
+\begin{frame}[fragile]
+	\begin{itemize}
+		\item<+->
+		      \alert{Eunoia} is a \emph{logical framework} for
+		      formalizing the proof systems of SMT solvers.
+
+		\item<+-> The \alert{co-operating proof calculus}
+		      (i.e., CPC, the proof system of \texttt{cvc5})
+		      is formalized as a Eunoia signature $\Pi_{\cpc}$.
+
+		\item<+-> Proofs produced by \texttt{cvc5} are
+		      Alethe-style, but exclusively use the rules
+		      declared in $\Pi_{\cpc}$.
+	\end{itemize}
+
+	\begin{uncoverenv}<+->
+		\exxample Introducing a rule for symmetry of equality.
+		\begin{lstlisting}
+(declare-rule symm ((T Type) (t T) (s T))
+    :premises ((= t s))
+    :conclusion (= s t)
+)\end{lstlisting}
+
+	\end{uncoverenv}
+\end{frame}
+
+\begin{frame}[fragile]
+	\exxample Proof script generated by \textsc{cvc5}.
+	\begin{lstlisting}
+(declare-const =
+  (-> (! Type :var T :implicit) T T Bool))
+(declare-rule symm ((T Type) (t T) (s T))
+    :premises ((= t s))
+    :conclusion (= s t)
+)
+(declare-type Int ())
+(declare-const a Int)
+(declare-const b Int)
+(assume @p0 (= a b))
+(step @p1 (= b a) :rule symm :premises (@p0))\end{lstlisting}
+	%
+	Declaring rules requires adding $\PROP$-level functions, e.g.;
+	%
+	$$\msf{symm} :
+		(\pii {T : \TYPE,\,t : T,\,s : T} {\lift{t = s} → \lift{s = t}})$$
+\end{frame}
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> \emph{\color{oc-green-9}Goal:}
+		      Implement a translation from SMT-LIB v3 and Eunoia to
+		      an OCaml representation of CC.
+		\item<+-> Use axioms of Theory $𝕌$ for encoding CC in Lambdapi.
+		      %
+		      $$
+			      \begin{array}{l@{\quad}l}
+				      \eval{\TYPE}_{\lp} ≡ \tt{Set}
+				       &
+				      \eval{\lam {x : t_1} {t_2}}_{\lp} ≡ \lam {x' : \eval{t_1}} {\eval{t_2}}
+				      \\
+				      \eval{\PROP}_{\lp} ≡ \tt{Prop}
+				       &
+				      \eval{\pii {x : t_1}{t_2}}_{\lp} ≡ \eval{t_1}_{\lp} \leadsto^d \eval{t_2}_{\lp}
+			      \end{array}
+		      $$
+	\end{itemize}
+\end{frame}
+
+
+
+\section{Syntax}
+
+
+
+\section{Semantics}
+
+
+\section{Proofs \& Lambdapi}
+
+
+
+
+
+
+% TODO.
+% smt-lib 3 proposal.
+% - dependent types, polymorphism
+% - commands
+% chad browns notes.
+% Eunoia, Ethos.
+
+% SMT-LIB 3 in CC
+% proof-irrelevant semantics of CC
+
+% dekuti encoding of CC.
+% future proofing:
+% translating smt3 concrete syntax into CC does the same for SMT 2.6 and for SMT 2.7.
+
+
+% some argument about why even though we have a much more expressive logic,
+% SMT solvers will only still support a small fragment of it.
+% regardless, it is very important for many reasons to
+
+\end{document}
+
+
+\end{frame}
