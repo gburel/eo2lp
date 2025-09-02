@@ -9,6 +9,7 @@
 \usepackage{mathtools}
 \usepackage{amssymb}
 
+\usepackage{emoji}
 \usepackage{listings}
 \usepackage{array}
 % \newfontfamily\Alegreya{Alegreya-Regular.otf}[
@@ -20,112 +21,8 @@
 \author{Ciarán Dunne and Guillaume Burel}
 \institute{ENS Paris-Saclay, INRIA}
 
-\lstdefinelanguage{smtlib}{
-    morekeywords={
-        assert, check-sat, check-sat-assuming, echo, exit,
-        get-assertions, get-assignment, get-info, get-model, get-option,
-        get-proof, get-unsat-assumptions, get-unsat-core, get-value,
-        pop, push, reset, reset-assertions, set-info, set-logic, set-option,
-        declare-const, define-const,
-        declare-fun, define-fun, define-fun-rec,
-        declare-sort, define-sort,
-        declare-type, define-type,
-        declare-rule, program,
-        assume, step, par, unknown
-    },
-    alsoletter={-, +,-,*,/,=,>,<,>=,<=,=>},
-    extendedchars=true,
-    sensitive=true,
-    morecomment=[l]{;},  % Line comments start with ;
-    morestring=[b]",      % Strings are enclosed in "
-    morestring=[b]|,      % Symbols are enclosed in |
-    morekeywords=[2]{ite, distinct, true, false, not, or, and, xor, forall, exists, choose, lambda, let, as}, % logic keywords
-    morekeywords=[3]{Type, Bool, Int, Real, List, BitVec, FloatingPoint},  % types
-    morekeywords=[4]{+,-,*,/,=,>,<,>=,<=,=>},  % infix operators
-    morekeywords=[5]{sat, unsat},
-    commentstyle=\color{gray},        % Comment color
-    keywordstyle=\color{blue},        % Keyword color
-    keywordstyle=[2]\color{purple},   % Control keywords color
-    keywordstyle=[3]\color{teal},     % Data types color
-    keywordstyle=[4]\color{red},      % Logical operators color
-    keywordstyle=[5]\color{magenta},
-    stringstyle=\color{violet},       % String color
-    numberstyle=\color{violet},       % Numeric constants color
-    basicstyle=\ttfamily\footnotesize,             % Use a monospaced font
-    moredelim=[is][\itshape]{|}{|},   % Enclose symbols in vertical bars in italics
-    numbers=left,                     % Line numbers on the left
-    numberstyle=\tiny\color{gray},    % Line numbers style
-    stepnumber=1,                     % Line numbers step
-    escapeinside={(*@}{@*)},          % Allow LaTeX inside listings
-    showstringspaces=false,           % Do not display spaces as underscores
-    breaklines=false,                   % Automatically break long lines
-    keepspaces=true,
-    showlines=false,
-    mathescape=true,
-    numberblanklines=false
-}
+\input{talk.macros}
 
-% For inline SMT-LIB code
-\newcommand{\smt}[1]{\lstinline[language=smtlib]{#1}}
-\newcommand{\exxample}{{\mediumfont\itshape{\textcolor{oc-green-9}{Example.} }}}
-\setbeamercolor*{structure}{fg=oc-indigo-5}
-\lstset{language=smtlib}
-
-\newcommand{\binddot}[3]{#1\,#2.\,#3}
-\newcommand{\plur}[2]{{#1}_{1}, \ldots, {#1}_{#2}}
-
-\newcommand{\msf}{\mathsf}
-\newcommand{\mbf}{\mathbf}
-
-\newcommand{\ar}{\msf{ar}}
-\newcommand{\Sort}{\msf{Sort}}
-\newcommand{\Rank}{\msf{Rank}}
-\newcommand{\Var}{\msf{Var}}
-
-\newcommand{\Bool}{\mbf{Bool}}
-\newcommand{\true}{\msf{true}}
-\newcommand{\false}{\msf{false}}
-
-\newcommand{\mtt}[1]{{\color{magenta}\texttt{#1}}}
-\newcommand{\sat}{\mtt{sat}}
-\newcommand{\unsat}{\mtt{unsat}}
-
-\newcommand{\all}{\binddot∀}
-\newcommand{\exi}{\binddot∃}
-\newcommand{\nexi}{\binddot∄}
-
-\newcommand{\TYPE}{\mtt{type}}
-\newcommand{\PROP}{\mtt{prop}}
-\newcommand{\KIND}{\mtt{kind}}
-\newcommand{\lam}{\binddot{λ}}
-\newcommand{\pii}{\binddot{Π}}
-\newcommand{\lift}[1]{⦉#1⦊}
-
-\newcommand{\Term}{\msf{Term}}
-\newcommand{\lett}[2]{\mbf{let}\ #1\ \mbf{in}\ #2}
-
-\newcommand{\norm}[1]{}
-
-\newcommand{\TermGrammar}{
-  \begin{array}{l@{\ }r@{\ \ }l@{\quad}l}
-    t ∈ \Term(Σ)
-    & ⩴ & x & \textit{variables}
-  \\
-    & ∣ & f(\plur t n) & \textit{function app.}
-  \\
-    & ∣ & f^σ(\plur t n) & \textit{sorted function app.}
-  \\
-    & ∣ & \all {x : σ} t & \textit{universal quantification}
-  \\
-    & ∣ & \exi {x : σ} t & \textit{existential quantification}
-  \\
-    & ∣ & \lett {x ≔ t_1} {t_2} & \textit{local definition}
-  \end{array}
-}
-
-\newcommand{\eval}[1]{\llbracket\,#1\,\rrbracket }
-\newcommand{\gtext}[1]{\text{{\color{gray}#1}}}
-\newcommand{\lp}{\msf{lp}}
 
 \begin{document}
 
@@ -154,16 +51,17 @@
 (assert (= (+ x (* 2 y)) 20))
 (assert (= (- x y) 2))
 (check-sat)
-(exit)\end{lstlisting}\end{uncoverenv}
+(exit)\end{lstlisting}
+	\end{uncoverenv}
 \end{frame}
 
-
 \begin{frame}[fragile]
-	\begin{itemize}
-		\item[]<+->{For satisfiable specifications,
-		      \texttt{cvc5} produces an \alert{assignment} for the
-		      uninterpreted symbols of the input problem.}
-	\end{itemize}
+	\begin{uncoverenv}<+->
+		For satisfiable specifications,
+		\texttt{cvc5} produces an \alert{assignment} for the
+		free variables of the input problem.
+	\end{uncoverenv}
+	\\[3mm]
 	\begin{uncoverenv}<+->
 		\exxample
 		\begin{lstlisting}
@@ -183,15 +81,14 @@ sat
   (define-fun x () Int 8)
   (define-fun y () Int 6)
 )\end{lstlisting}
-
 	\end{uncoverenv}
 \end{frame}
 
 \begin{frame}[fragile]
-	\begin{itemize}
-		\item[]<+-> \hspace{-5mm}Some SMT solvers produce \alert{proofs}
-		      for unsatisfiable problems.
-	\end{itemize}
+	\begin{uncoverenv}<+->
+		Some SMT solvers produce \alert{proofs} for unsatisfiable problems.
+	\end{uncoverenv}
+	\\[3mm]
 	\begin{uncoverenv}<+->
 		\exxample
 		\begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
@@ -213,77 +110,80 @@ unsat
 	\end{uncoverenv}
 \end{frame}
 
-\newcommand{\cpc}{\mathsf{CPC}}
-
-\begin{frame}[fragile]
+\begin{frame}[fragile]{Eunoia and Ethos}
 	\begin{itemize}
 		\item<+->
-		      \alert{Eunoia} is a \emph{logical framework} for
-		      formalizing the proof systems of SMT solvers.
+		      \alert{Eunoia} is a \emph{logical framework} aimed at
+		      formalizing the proof systems used by SMT solvers.
+		      \begin{itemize}
+			      \item<+-> development led by Reynolds~\emoji{flag-united-states},
+			      \item<+-> the `spiritual successor' of the \alert{Alethe} proof format.
+		      \end{itemize}
 
-		\item<+-> The \alert{co-operating proof calculus}
-		      (i.e., CPC, the proof system of \texttt{cvc5})
-		      is formalized as a Eunoia signature $\Pi_{\cpc}$.
+		\item<+-> Extends SMT-LIB by adding:
+		      \begin{itemize}
+			      \item<+->(dependent) types, parametric polymorphism
+			      \item<+->`programs' (i.e., constants with rewrite rules)
+			      \item<+->inference rules, commands for building proofs
+		      \end{itemize}
 
-		\item<+-> Proofs produced by \texttt{cvc5} are
-		      Alethe-style, but exclusively use the rules
-		      declared in $\Pi_{\cpc}$.
+		\item<+->
+		      \alert{Ethos} is the official tool for checking the correctness
+		      of Eunoia signatures (including proof scripts!).
 	\end{itemize}
-
-	\begin{uncoverenv}<+->
-		\exxample Introducing a rule for symmetry of equality.
-		\begin{lstlisting}
-(declare-rule symm ((T Type) (t T) (s T))
-    :premises ((= t s))
-    :conclusion (= s t)
-)\end{lstlisting}
-
-	\end{uncoverenv}
 \end{frame}
 
 \begin{frame}[fragile]
-	\exxample Proof script generated by \textsc{cvc5}.
-	\begin{lstlisting}
-(declare-const =
-  (-> (! Type :var T :implicit) T T Bool))
-(declare-rule symm ((T Type) (t T) (s T))
-    :premises ((= t s))
-    :conclusion (= s t)
-)
-(declare-type Int ())
-(declare-const a Int)
-(declare-const b Int)
-(assume @p0 (= a b))
-(step @p1 (= b a) :rule symm :premises (@p0))\end{lstlisting}
-	%
-	Declaring rules requires adding $\PROP$-level functions, e.g.;
-	%
-	$$\msf{symm} :
-		(\pii {T : \TYPE,\,t : T,\,s : T} {\lift{t = s} → \lift{s = t}})$$
-\end{frame}
-
-\begin{frame}
+	% tikz diagram here for the dir-tree of eo/cpc/...
+	% tikz diagram for proof output by cvc5, checked by ethos.
 	\begin{itemize}
-		\item<+-> \emph{\color{oc-green-9}Goal:}
-		      Implement a translation from SMT-LIB v3 and Eunoia to
-		      an OCaml representation of CC.
-		\item<+-> Use axioms of Theory $𝕌$ for encoding CC in Lambdapi.
-		      %
-		      $$
-			      \begin{array}{l@{\quad}l}
-				      \eval{\TYPE}_{\lp} ≡ \tt{Set}
-				       &
-				      \eval{\lam {x : t_1} {t_2}}_{\lp} ≡ \lam {x' : \eval{t_1}} {\eval{t_2}}
-				      \\
-				      \eval{\PROP}_{\lp} ≡ \tt{Prop}
-				       &
-				      \eval{\pii {x : t_1}{t_2}}_{\lp} ≡ \eval{t_1}_{\lp} \leadsto^d \eval{t_2}_{\lp}
-			      \end{array}
-		      $$
+		\item<+-> The \alert{co-operating proof calculus}
+		      (i.e., CPC, the proof system of \texttt{cvc5})
+		      is formalized as a Eunoia signature $Σ_{\cpc}$.
+
+		\item<+-> Proofs produced by \texttt{cvc5} are
+		      Eunoia proof scripts that exclusively use
+		      the inference rules from $Σ_{\cpc}$.
 	\end{itemize}
 \end{frame}
 
+\begin{frame}[fragile]{LambdaPi}
+	\begin{itemize}
+		\item<+-> \alert{LambdaPi} is a logical framework based
+		      on the $λΠ$-calculus (modulo rewrite rules).
+		      \begin{itemize}
+			      \item<+-> development led by Blanqui~\emoji{flag-france},
+			      \item<+-> interactive theorem proving via LSP!
+		      \end{itemize}
 
+		\item<+-> Primarily focused on proof assistant \alert{interoperability}.
+
+		\item<+-> \emph{\color{oc-green-9}Goal:}
+		      Design a translation procedure $T$ such that:
+		      \begin{itemize}
+			      \item<+-> if $Σ$ is a Eunoia signature implementing some \alert{logic} $L$,
+			      \item<+-> then $T(Σ)$ is a LambdaPi signature also implementing $L$.
+			            \\[2mm]
+		      \end{itemize}
+
+		\item<+-> Thus, if $Π$ is a valid Eunoia \alert{proof script} depending on $Σ$,
+		      then $T(Π)$ should be \alert{well-typed} wrt. $T(Σ)$.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Why Eunoia?}
+	\begin{itemize}
+		\item<+-> What about Alethe?
+		      \begin{itemize}
+			      \item[\emoji{no-entry}]<+-> inference rules are hardcoded in a PDF.
+			      \item[\emoji{no-entry}]<+-> extending/modifying the rules requires modifying the checker.
+			      \item[\emoji{no-entry}]<+-> cannot precisely capture \texttt{cvc5}'s proof system.
+			      \item[\emoji{check-mark-button}]<+->
+			            Coltellacci and Merz have extended the Carcara checker
+			            to allow LambdaPi output for Alethe proofs.
+		      \end{itemize}
+	\end{itemize}
+\end{frame}
 
 \section{Syntax}
 
@@ -321,4 +221,45 @@ unsat
 \end{document}
 
 
-\end{frame}
+
+% \begin{frame}[fragile]
+% 	\exxample Proof script generated by \textsc{cvc5}.
+% 	\begin{lstlisting}
+% (declare-const =
+%   (-> (! Type :var T :implicit) T T Bool))
+% (declare-rule symm ((T Type) (t T) (s T))
+%     :premises ((= t s))
+%     :conclusion (= s t)
+% )
+% (declare-type Int ())
+% (declare-const a Int)
+% (declare-const b Int)
+% (assume @p0 (= a b))
+% (step @p1 (= b a) :rule symm :premises (@p0))\end{lstlisting}
+% 	%
+% 	Declaring rules requires adding $\PROP$-level functions, e.g.;
+% 	%
+% 	$$\msf{symm} :
+% 		(\pii {T : \TYPE,\,t : T,\,s : T} {\lift{t = s} → \lift{s = t}})$$
+% \end{frame}
+
+% \begin{frame}
+% 	\begin{itemize}
+% 		\item<+-> \emph{\color{oc-green-9}Goal:}
+% 		      Implement a translation from SMT-LIB v3 and Eunoia to
+% 		      an OCaml representation of CC.
+% 		\item<+-> Use axioms of Theory $𝕌$ for encoding CC in Lambdapi.
+% 		      %
+% 		      $$
+% 			      \begin{array}{l@{\quad}l}
+% 				      \eval{\TYPE}_{\lp} ≡ \tt{Set}
+% 				       &
+% 				      \eval{\lam {x : t_1} {t_2}}_{\lp} ≡ \lam {x' : \eval{t_1}} {\eval{t_2}}
+% 				      \\
+% 				      \eval{\PROP}_{\lp} ≡ \tt{Prop}
+% 				       &
+% 				      \eval{\pii {x : t_1}{t_2}}_{\lp} ≡ \eval{t_1}_{\lp} \leadsto^d \eval{t_2}_{\lp}
+% 			      \end{array}
+% 		      $$
+% 	\end{itemize}
+% \end{frame}

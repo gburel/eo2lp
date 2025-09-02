@@ -1,0 +1,109 @@
+
+\newcommand{\cpc}{\mathsf{CPC}}
+
+\lstdefinelanguage{smtlib}{
+	morekeywords={
+			assert, check-sat, check-sat-assuming, echo, exit,
+			get-assertions, get-assignment, get-info, get-model, get-option,
+			get-proof, get-unsat-assumptions, get-unsat-core, get-value,
+			pop, push, reset, reset-assertions, set-info, set-logic, set-option,
+			declare-const, define-const,
+			declare-fun, define-fun, define-fun-rec,
+			declare-sort, define-sort,
+			declare-type, define-type,
+			declare-rule, program,
+			assume, step, par, unknown
+		},
+	alsoletter={-, +,-,*,/,=,>,<,>=,<=,=>},
+	extendedchars=true,
+	sensitive=true,
+	morecomment=[l]{;},  % Line comments start with ;
+	morestring=[b]",      % Strings are enclosed in "
+	morestring=[b]|,      % Symbols are enclosed in |
+	morekeywords=[2]{ite, distinct, true, false, not, or, and, xor, forall, exists, choose, lambda, let, as}, % logic keywords
+	morekeywords=[3]{Type, Bool, Int, Real, List, BitVec, FloatingPoint},  % types
+	morekeywords=[4]{+,-,*,/,=,>,<,>=,<=,=>},  % infix operators
+	morekeywords=[5]{sat, unsat},
+	commentstyle=\color{gray},        % Comment color
+	keywordstyle=\color{blue},        % Keyword color
+	keywordstyle=[2]\color{purple},   % Control keywords color
+	keywordstyle=[3]\color{teal},     % Data types color
+	keywordstyle=[4]\color{red},      % Logical operators color
+	keywordstyle=[5]\color{magenta},
+	stringstyle=\color{violet},       % String color
+	numberstyle=\color{violet},       % Numeric constants color
+	basicstyle=\ttfamily\footnotesize,             % Use a monospaced font
+	moredelim=[is][\itshape]{|}{|},   % Enclose symbols in vertical bars in italics
+	numbers=left,                     % Line numbers on the left
+	numberstyle=\tiny\color{gray},    % Line numbers style
+	stepnumber=1,                     % Line numbers step
+	escapeinside={(*@}{@*)},          % Allow LaTeX inside listings
+	showstringspaces=false,           % Do not display spaces as underscores
+	breaklines=false,                   % Automatically break long lines
+	keepspaces=true,
+	showlines=false,
+	mathescape=true,
+	numberblanklines=false
+}
+
+% For inline SMT-LIB code
+\newcommand{\smt}[1]{\lstinline[language=smtlib]{#1}}
+\newcommand{\exxample}{{\mediumfont\itshape{\textcolor{oc-green-9}{Example.} }}}
+\setbeamercolor*{structure}{fg=oc-indigo-5}
+\lstset{language=smtlib}
+
+\newcommand{\binddot}[3]{#1\,#2.\,#3}
+\newcommand{\plur}[2]{{#1}_{1}, \ldots, {#1}_{#2}}
+
+\newcommand{\msf}{\mathsf}
+\newcommand{\mbf}{\mathbf}
+
+\newcommand{\ar}{\msf{ar}}
+\newcommand{\Sort}{\msf{Sort}}
+\newcommand{\Rank}{\msf{Rank}}
+\newcommand{\Var}{\msf{Var}}
+
+\newcommand{\Bool}{\mbf{Bool}}
+\newcommand{\true}{\msf{true}}
+\newcommand{\false}{\msf{false}}
+
+\newcommand{\mtt}[1]{{\color{magenta}\texttt{#1}}}
+\newcommand{\sat}{\mtt{sat}}
+\newcommand{\unsat}{\mtt{unsat}}
+
+\newcommand{\all}{\binddot∀}
+\newcommand{\exi}{\binddot∃}
+\newcommand{\nexi}{\binddot∄}
+
+\newcommand{\TYPE}{\mtt{type}}
+\newcommand{\PROP}{\mtt{prop}}
+\newcommand{\KIND}{\mtt{kind}}
+\newcommand{\lam}{\binddot{λ}}
+\newcommand{\pii}{\binddot{Π}}
+\newcommand{\lift}[1]{⦉#1⦊}
+
+\newcommand{\Term}{\msf{Term}}
+\newcommand{\lett}[2]{\mbf{let}\ #1\ \mbf{in}\ #2}
+
+\newcommand{\norm}[1]{}
+
+\newcommand{\TermGrammar}{
+	\begin{array}{l@{\ }r@{\ \ }l@{\quad}l}
+		t ∈ \Term(Σ)
+		 & ⩴ & x                     & \textit{variables}
+		\\
+		 & ∣ & f(\plur t n)          & \textit{function app.}
+		\\
+		 & ∣ & f^σ(\plur t n)        & \textit{sorted function app.}
+		\\
+		 & ∣ & \all {x : σ} t        & \textit{universal quantification}
+		\\
+		 & ∣ & \exi {x : σ} t        & \textit{existential quantification}
+		\\
+		 & ∣ & \lett {x ≔ t_1} {t_2} & \textit{local definition}
+	\end{array}
+}
+
+\newcommand{\eval}[1]{\llbracket\,#1\,\rrbracket }
+\newcommand{\gtext}[1]{\text{{\color{gray}#1}}}
+\newcommand{\lp}{\msf{lp}}
