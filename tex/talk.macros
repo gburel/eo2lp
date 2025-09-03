@@ -106,4 +106,6 @@
 
 \newcommand{\eval}[1]{\llbracket\,#1\,\rrbracket }
 \newcommand{\gtext}[1]{\text{{\color{gray}#1}}}
-\newcommand{\lp}{\msf{lp}}
+\newcommand{\LambdaPi}{{\color{MaterialBlue800}\textsc{LambdaPi}}}
+\newcommand{\sysname}[1]{{\color{MaterialGrey800}\textsc{#1}}}
+\newcommand{\toolname}[1]{{\color{MaterialBlueGrey500}\tt{#1}}}

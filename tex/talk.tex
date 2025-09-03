@@ -2,6 +2,7 @@
 \usetheme{Arguelles}
 
 \usepackage{xcolor}
+\usepackage{xcolor-material}
 \usepackage{ebproof}
 \usepackage{unicode-math-input}
 \usepackage{MnSymbol}
@@ -30,15 +31,17 @@
 
 \section{Background}
 
-\begin{frame}[fragile]{Background}
+\begin{frame}[fragile, plain]{Background}
 	\begin{itemize}
-		\item<+-> \alert{Satisfiability modulo theories} (SMT) refers to the area
-		      of automated reasoning aimed at solving (first-order) satisfiability
-		      problems within various mathematical theories.
+		\item<+-> \alert{Satisfiability modulo theories} (SMT)
+		      is an area of automated reasoning aimed at
+		      developing tools for deciding the satisfiability
+		      of formulas within a curated selection of
+		      first-order mathematical theories.
 		      %
-		\item<+-> \alert{SMT-LIB} (v2.7) is a formal language
-		      used for satisfiability problems and specification
-		      of theories.
+		\item<+-> \alert{SMT-LIB} (v2.7) is a standardized
+		      formal language for satisfiability problems
+		      and theory documentation.
 	\end{itemize}
 	%
 	\begin{uncoverenv}<+->
@@ -55,15 +58,15 @@
 	\end{uncoverenv}
 \end{frame}
 
-\begin{frame}[fragile]
-	\begin{uncoverenv}<+->
-		For satisfiable specifications,
-		\texttt{cvc5} produces an \alert{assignment} for the
-		free variables of the input problem.
-	\end{uncoverenv}
-	\\[3mm]
+\begin{frame}[fragile, plain]
 	\begin{uncoverenv}<+->
 		\exxample
+		The example problem is \alert{satisfiable}.
+		Hence, \texttt{cvc5} can return a \alert{solution}
+		assigning concrete values to free variables.
+	\end{uncoverenv}
+	%
+	\begin{uncoverenv}<+->
 		\begin{lstlisting}
 (set-logic QF_LIA)
 (set-option :produce-models true)
@@ -71,9 +74,7 @@
 (declare-const y Int)
 (assert (= (+ x (* 2 y)) 20))
 (assert (= (- x y) 2))
-(check-sat)
-(get-model)
-(exit)\end{lstlisting}
+...\end{lstlisting}
 		\hrule
 		\begin{lstlisting}
 sat
@@ -84,13 +85,13 @@ sat
 	\end{uncoverenv}
 \end{frame}
 
-\begin{frame}[fragile]
-	\begin{uncoverenv}<+->
-		Some SMT solvers produce \alert{proofs} for unsatisfiable problems.
-	\end{uncoverenv}
-	\\[3mm]
+\begin{frame}[fragile, plain]
 	\begin{uncoverenv}<+->
 		\exxample
+		The following problem is \alert{unsatisfiable}.
+		In this case, \texttt{cvc5} can provide a \alert{proof} demonstrating this.
+	\end{uncoverenv}
+	\begin{uncoverenv}<+->
 		\begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
 (set-logic QF_UF)
 (set-option :produce-proofs true)
@@ -108,9 +109,46 @@ unsat
 (step @p3 :rule and_elim :premises (@p1) :args (0))
 (step @p4 false :rule contra :premises (@p3 @p2))\end{lstlisting}
 	\end{uncoverenv}
+	\begin{uncoverenv}<+->
+		\textbf{What is the formal meaning of this proof?}
+	\end{uncoverenv}
+	\\
+	\begin{uncoverenv}<+->
+		\textbf{In general, what rules may be used in a proof?}
+	\end{uncoverenv}
 \end{frame}
 
-\begin{frame}[fragile]{Eunoia and Ethos}
+
+\begin{frame}[fragile, plain]
+	% tikz diagram here for the dir-tree of eo/cpc/...
+	% tikz diagram for proof output by cvc5, checked by ethos.
+	\begin{itemize}
+		\item<+-> The \alert{co-operating proof calculus} (CPC)
+		      is \texttt{cvc5}'s proof system.
+		      \begin{itemize}
+			      \item[\emoji{angel}]<+-> faithful to the internal reasoning of \texttt{cvc5}.
+			      \item[\emoji{elephant}]<+-> not small (${>}\ 100$ inference rules).
+			      \item[\emoji{puzzle-piece}] some rules take arguments, some have side-conditions.
+		      \end{itemize}
+	\end{itemize}
+	%
+	\begin{uncoverenv}<+->
+		\exxample A CPC rule for elimination on $n$-ary conjunctions,
+		where $φ_1 \ldots φ_n$ are formulas and $i ∈ ℕ$.
+		\[
+			\begin{prooftree}
+				\hypo{(φ_1 ∧ \ldots ∧ φ_n) ∣ i}
+				\infer1{φ_i}
+			\end{prooftree}
+		\]
+	\end{uncoverenv}
+	\\
+	\begin{uncoverenv}<+->
+		\textbf{How and where are these rules specified?}
+	\end{uncoverenv}
+\end{frame}
+
+\begin{frame}[fragile, plain]{Eunoia and Ethos}
 	\begin{itemize}
 		\item<+->
 		      \alert{Eunoia} is an emerging \emph{logical framework} aimed at
@@ -128,11 +166,10 @@ unsat
 			      \item<+->`programs' (i.e., constants with rewrite rules)
 			      \item<+->inference rules, commands for building proofs
 		      \end{itemize}
-
 	\end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]
+\begin{frame}[fragile, plain]
 	% tikz diagram here for the dir-tree of eo/cpc/...
 	% tikz diagram for proof output by cvc5, checked by ethos.
 	\begin{itemize}
@@ -146,32 +183,51 @@ unsat
 	\end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{LambdaPi}
+\begin{frame}[fragile, plain]{LambdaPi}
 	\begin{itemize}
 		\item<+-> Logical framework based
 		      on the \emph{$λΠ$-calculus modulo rewriting}.
 		      \begin{itemize}
 			      \item[\emoji{flag-france}]<+-> development led by Frédéric Blanqui, INRIA Paris-Saclay
-			      \item[\emoji{locked}]<+-> small and fast, trusted code base
+			      \item[\emoji{locked}]<+-> small and fast, trusted code base.
 			      \item[\emoji{robot}]<+-> interactive theorem proving via LSP!
 		      \end{itemize}
 
 		\item<+-> Primarily focused on proof assistant \alert{interoperability}.
-
-		\item<+-> \emph{\color{oc-green-9}Goal:}
-		      Design a translation procedure $T$ such that:
-		      \begin{itemize}
-			      \item<+-> if $Σ$ is a Eunoia signature implementing some \alert{logic} $L$,
-			      \item<+-> then $T(Σ)$ is a LambdaPi signature also implementing $L$.
-			            \\[2mm]
-		      \end{itemize}
-
-		\item<+-> Thus, if $Π$ is a valid Eunoia \alert{proof script} depending on $Σ$,
-		      then $T(Π)$ should be \alert{well-typed} wrt. $T(Σ)$.
 	\end{itemize}
+	\vspace{2mm}
+	\begin{figure}
+		\centering
+		\begin{tikzpicture}[scale=0.8]
+			\path (0,0) node (lp) {{\large\LambdaPi}}
+			(5,0) node (isa) {\small\sysname{Isabelle}}
+			(3,-2) node (agda) {\small\sysname{Agda}}
+			% (0,2) node (ze) {Zenon \& ArchSAT}
+			(3,2) node (hol) {\small\sysname{HOL}}
+			(0,-2) node (pvs) {\small\sysname{PVS}}
+			(-3,-2) node (k) {\small\sysname{$\mathbb{K}$-framework}}
+			(-5,0) node (mat) {\small\sysname{Matita}}
+			(0,2) node (coq) {\small\sysname{Rocq}}
+			(-3,2) node (lean) {\small\sysname{Lean}}
+			% (0,2) node [draw, dashed, purple] (smt) {\color{purple}\textbf{SMT}}
+			;
+			% \draw[->,red, thick] (smt) -- (lp) node[midway,sloped,above]
+			% {\footnotesize{Carcara}};
+			\draw[->] (lean) -- (lp) node[midway,sloped,above] {\scriptsize\toolname{lean2dk}};
+			\draw[->] (isa) -- (lp) node[midway,sloped,above] {\scriptsize\toolname{isabelle\_dk}};
+			\draw[->] (agda) -- (lp) node[midway,sloped,above] {\scriptsize\toolname{agda2dk}};
+			% \draw[<->] (ze) -- (lp) node[midway,sloped,above] {};
+			\draw[<->] (hol) -- (lp) node[midway,sloped,above] {\scriptsize\toolname{hol2dk}};
+			\draw[<->] (mat) -- (lp) node[midway,sloped,above] {\scriptsize\toolname{Krajono}};
+			\draw[->] (pvs) -- (lp);
+			\draw[->] (k) -- (lp) node[midway,sloped,above] {\scriptsize\toolname{KaMeLo}};
+			\draw[<->] (coq) -- (lp)  node[midway,sloped,above] {\scriptsize\toolname{vodk}};
+		\end{tikzpicture}
+		\label{fig:interop}
+	\end{figure}
 \end{frame}
 
-\begin{frame}[fragile]{Why Eunoia?}
+\begin{frame}[fragile, plain]{Why Eunoia?}
 	\begin{itemize}
 		\item<+-> What about Alethe?
 		      \begin{itemize}
@@ -179,7 +235,7 @@ unsat
 			      \item<+-> missing details needed for reconstruction.
 			      \item<+->
 			            \textbf{Coltellacci and Merz}: extend \alert{Carcara}
-			            to allow LambdaPi output.
+			            to support LambdaPi output.
 		      \end{itemize}
 	\end{itemize}
 \end{frame}
@@ -236,7 +292,7 @@ unsat
 
 
 
-% \begin{frame}[fragile]
+% \begin{frame}[fragile, plain]
 % 	\exxample Proof script generated by \textsc{cvc5}.
 % 	\begin{lstlisting}
 % (declare-const =
