@@ -1,4 +1,4 @@
-\documentclass[lualatex, compress, 12pt]{beamer}
+\documentclass[lualatex, 12pt, handout]{beamer}
 \usetheme{Arguelles}
 
 \usepackage{xcolor}
@@ -113,11 +113,13 @@ unsat
 \begin{frame}[fragile]{Eunoia and Ethos}
 	\begin{itemize}
 		\item<+->
-		      \alert{Eunoia} is a \emph{logical framework} aimed at
+		      \alert{Eunoia} is an emerging \emph{logical framework} aimed at
 		      formalizing the proof systems used by SMT solvers.
 		      \begin{itemize}
-			      \item<+-> development led by Reynolds~\emoji{flag-united-states},
-			      \item<+-> the `spiritual successor' of the \alert{Alethe} proof format.
+			      \item[\emoji{flag-united-states}]<+-> development led by Andrew Reynolds, at University of Iowa.
+			      \item[\emoji{ghost}]<+-> the `spiritual successor' of the \alert{Alethe} proof format.
+			      \item[\emoji{scroll}]<+-> covers theory signatures \& proof scripts.
+			      \item[\emoji{check-mark}]<+-> paired with the \alert{Ethos} checker.
 		      \end{itemize}
 
 		\item<+-> Extends SMT-LIB by adding:
@@ -127,9 +129,6 @@ unsat
 			      \item<+->inference rules, commands for building proofs
 		      \end{itemize}
 
-		\item<+->
-		      \alert{Ethos} is the official tool for checking the correctness
-		      of Eunoia signatures (including proof scripts!).
 	\end{itemize}
 \end{frame}
 
@@ -149,11 +148,12 @@ unsat
 
 \begin{frame}[fragile]{LambdaPi}
 	\begin{itemize}
-		\item<+-> \alert{LambdaPi} is a logical framework based
-		      on the $λΠ$-calculus (modulo rewrite rules).
+		\item<+-> Logical framework based
+		      on the \emph{$λΠ$-calculus modulo rewriting}.
 		      \begin{itemize}
-			      \item<+-> development led by Blanqui~\emoji{flag-france},
-			      \item<+-> interactive theorem proving via LSP!
+			      \item[\emoji{flag-france}]<+-> development led by Frédéric Blanqui, INRIA Paris-Saclay
+			      \item[\emoji{locked}]<+-> small and fast, trusted code base
+			      \item[\emoji{robot}]<+-> interactive theorem proving via LSP!
 		      \end{itemize}
 
 		\item<+-> Primarily focused on proof assistant \alert{interoperability}.
@@ -175,13 +175,27 @@ unsat
 	\begin{itemize}
 		\item<+-> What about Alethe?
 		      \begin{itemize}
-			      \item[\emoji{no-entry}]<+-> inference rules are hardcoded in a PDF.
-			      \item[\emoji{no-entry}]<+-> extending/modifying the rules requires modifying the checker.
-			      \item[\emoji{no-entry}]<+-> cannot precisely capture \texttt{cvc5}'s proof system.
-			      \item[\emoji{check-mark-button}]<+->
-			            Coltellacci and Merz have extended the Carcara checker
-			            to allow LambdaPi output for Alethe proofs.
+			      \item<+-> inference rules only exist \emph{in papyro}.
+			      \item<+-> missing details needed for reconstruction.
+			      \item<+->
+			            \textbf{Coltellacci and Merz}: extend \alert{Carcara}
+			            to allow LambdaPi output.
 		      \end{itemize}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{}
+	\begin{itemize}
+		\item<+-> \emph{\color{oc-green-9}Goal:}
+		      Design a translation procedure $T$ such that:
+		      \begin{itemize}
+			      \item<+-> if $Σ$ is a Eunoia signature implementing some \alert{logic} $L$,
+			      \item<+-> then $T(Σ)$ is a LambdaPi signature also implementing $L$.
+			            \\[2mm]
+		      \end{itemize}
+
+		\item<+-> Thus, if $Π$ is a valid Eunoia \alert{proof script} depending on $Σ$,
+		      then $T(Π)$ should be \alert{well-typed} wrt. $T(Σ)$.
 	\end{itemize}
 \end{frame}
 
