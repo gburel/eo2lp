@@ -1,6 +1,7 @@
-\documentclass[lualatex, 12pt, handout]{beamer}
+\documentclass[lualatex, compress, 12pt, handout]{beamer}
 \usetheme{Arguelles}
 
+% \usepackage{stix}
 \usepackage{xcolor}
 \usepackage{xcolor-material}
 \usepackage{ebproof}
@@ -74,7 +75,9 @@
 (declare-const y Int)
 (assert (= (+ x (* 2 y)) 20))
 (assert (= (- x y) 2))
-...\end{lstlisting}
+(check-sat)
+(exit)
+\end{lstlisting}
 		\hrule
 		\begin{lstlisting}
 sat
@@ -255,14 +258,113 @@ unsat
 	\end{itemize}
 \end{frame}
 
-\section{Syntax}
+\subsection{Eunoia}
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> Fix a set of \alert{symbols} $𝒮$, and let $s ∈ 𝒮$.
+		\item<+-> Define $\mbf{eo}$ as the set of Eunoia \alert{expressions} thus:
+		      $$
+			      \begin{array}{l@{\ }c@{\ }l@{\quad}l}
+				      e ∈ \mbf{eo} & ⩴ & s                             & \mcomment{(symbol)}      \\
+				                   & ∣ & \paren{{s}\ e_1\ \ldots\ e_n} & \mcomment{(application)}
+			      \end{array}
+		      $$
+		\item<+-> In general, expressions are either:
+		      \begin{itemize}
+			      \item<+-> \alert{terms} (e.g., \mtt{true}, \mtt{false})
+			      \item<+-> \alert{types}
+			            (e.g.,
+			            \mtt{Bool},
+			            \paren{\mtt{->}\ \mtt{Bool}\ \mtt{Bool}}
+			            )
+			      \item<+-> \alert{kinds}
+			            (e.g., \mtt{Type}, \paren{\mtt{->}\ \mtt{Type}\ \mtt{Type}})
+		      \end{itemize}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	The \alert{elaboration} of an expression determines its meaning.
+	\begin{itemize}
+		\item<+-> Eunoia has a built-in symbol $\mtt{\_}$ for higher-order application.
+
+		\item<+-> The \alert{default} elaboration strategy is a left-fold:
+		      $$\paren{s\ e_1\ \ldots\ e_n}\quad ⟹ \quad
+			      \paren{\mtt{\_}\ \paren{\ldots\paren{\mtt{\_}\ s\ e_1}\ldots}\ \ e_n}$$
+
+		\item<+-> In general, strategy depends on the \alert{attributes} of symbols:
+		      $$
+			      \begin{array}{l@{\ }c@{\ }l}
+				      ν ∈ \mbf{attr_v} & ⩴   & \mtt{:implicit} ∣ \mtt{:list}
+				      \\[2mm]
+				      α ∈ \mbf{attr_c} & ⩴   & \mtt{:right-assoc} ∣ \mtt{:right-assoc-nil}\some{t}                        \\
+				                       & {∣} & \mtt{:left-assoc} ∣ \mtt{:left-assoc-nil}\some{t}                          \\
+				                       & {∣} & \mtt{:chainable}\some{s} ∣ \mtt{:pairwise}\some{s} ∣ \mtt{:binder}\some{s}
+			      \end{array}
+		      $$
+
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+	Each \alert{constant declaration} has the form:
+	$$\paren{\mtt{declare-const}\ s\ e\ \maybe{α}}$$
+	\begin{uncoverenv}<+->
+		Where $α$ is a \alert{constant attribute}, given thus:
+
+	\end{uncoverenv}
+	\begin{uncoverenv}<+->
+		\exxample Declaring the type and attribute of the \mtt{and} symbol.
+		\begin{lstlisting}
+(declare-const and (-> Bool Bool Bool)
+  :right-assoc-nil true
+)\end{lstlisting}
+	\end{uncoverenv}
+\end{frame}
+
+% \begin{frame}
+% 	In general, expressions are either \alert{terms}, \alert{types}, or \alert{kinds}.
+% 	\begin{itemize}
+% 		\item<+-> Fix a domain $𝒟$ of \alert{individuals}.
+% 		      \begin{itemize}
+% 			      \item<+-> each term denotes some $x ∈ 𝒟$, or some function $f ∈ 𝒟 ⇀ 𝒟$.
+% 			      \item<+-> e.g., $\mtt{true}$ and $\mtt{false}$ are terms denoting $\mbf{1}$ and $\mbf{0}$ resp.
+% 		      \end{itemize}
 
 
+% 		      partitioned by $B_1 \ldots B_n$,
+% 		      $$ 𝒟 = B_1 ∪ \ldots ∪ B_n $$
+% 		      \begin{itemize}
+% 			      \item<+-> each term denotes either an individual or a function between individuals,
+% 			      \item<+-> e.g., $\mtt{Bool}$ is a base type denoting $\{\mbf{1},\mbf{0}\}$,
+% 		      \end{itemize}
+% 		\item<+-> Let $𝒯$ be the domain for \alert{types}, where:
+% 		      $$ τ ∈ 𝒯 ⩴ B_i ∣ (τ_1 → τ_2)$$
+% 		\item<+-> Let $𝒦$ be the domain for \alert{kinds}, where:
+% 		      $$ κ ∈ 𝒦 ⩴ 𝒯 ∣ (κ_1 → κ_2) $$
 
-\section{Semantics}
+% 	\end{itemize}
 
 
-\section{Proofs \& Lambdapi}
+% \begin{itemize}
+% 	\item<+-> $\paren{\mtt{->}\ \mtt{Bool}\ \mtt{Bool}}$ denotes the function space $\{\mbf{1},\mbf{0}\} → \{\mbf{1},\mbf{0}\}$.
+% \end{itemize}
+% \begin{itemize}
+% 	\item<+-> $\mtt{Type}$ is a kind, denoting the set of all types.
+% 	\item<+-> $\paren{\mtt{->}\ \mtt{Type}\ \mtt{Type}}$ is a kind, denoting the set of type constructors.
+% \end{itemize}
+
+
+\subsection{LambdaPi}
+
+\section{Translation}
+
+\section{Results}
+
+\subsection{Translating CPC}
+
+\subsection{Translating Rodin}
 
 
 

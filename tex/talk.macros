@@ -48,8 +48,8 @@
 
 % For inline SMT-LIB code
 \newcommand{\smt}[1]{\lstinline[language=smtlib]{#1}}
-\newcommand{\exxample}{{\mediumfont\itshape{\textcolor{oc-green-9}{Example.} }}}
-\setbeamercolor*{structure}{fg=oc-indigo-5}
+\newcommand{\exxample}{{\mediumfont\itshape{\textcolor{MaterialGreen900}{Example.} }}}
+\setbeamercolor*{structure}{fg=MaterialBlue800}
 \lstset{language=smtlib}
 
 \newcommand{\binddot}[3]{#1\,#2.\,#3}
@@ -109,3 +109,10 @@
 \newcommand{\LambdaPi}{{\color{MaterialBlue800}\textsc{LambdaPi}}}
 \newcommand{\sysname}[1]{{\color{MaterialGrey800}\textsc{#1}}}
 \newcommand{\toolname}[1]{{\color{MaterialBlueGrey500}\tt{#1}}}
+
+\newcommand{\wrapp}[4]{
+	{\color{#1}{#2}}{#4}{\color{#1}{#3}}}
+\newcommand{\paren}[1]{\wrapp{MaterialGrey600}{\lparen}{\rparen}{#1}}
+\newcommand{\mcomment}[1]{{\color{MaterialIndigo500}{\text{#1}}}}
+\newcommand{\maybe}[1]{\wrapp{MaterialGrey600}{\langle}{\rangle_?}{#1}}
+\newcommand{\some}[1]{\wrapp{MaterialGrey600}{\langle}{\rangle}{#1}}
