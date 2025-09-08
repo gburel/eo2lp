@@ -53,7 +53,7 @@
 \lstset{language=smtlib}
 
 \newcommand{\binddot}[3]{#1\,#2.\,#3}
-\newcommand{\plur}[2]{{#1}_{1}, \ldots, {#1}_{#2}}
+\newcommand{\plur}[2]{{#1}_{1}\,\ldots\,{#1}_{#2}}
 
 \newcommand{\msf}{\mathsf}
 \newcommand{\mbf}{\mathbf}
@@ -115,4 +115,6 @@
 \newcommand{\paren}[1]{\wrapp{MaterialGrey600}{\lparen}{\rparen}{#1}}
 \newcommand{\mcomment}[1]{{\color{MaterialIndigo500}{\text{#1}}}}
 \newcommand{\maybe}[1]{\wrapp{MaterialGrey600}{\langle}{\rangle_?}{#1}}
+\newcommand{\many}[1]{\wrapp{MaterialGrey600}{\langle}{\rangle_+}{#1}}
+\newcommand{\any}[1]{\wrapp{MaterialGrey600}{\langle}{\rangle_∗}{#1}}
 \newcommand{\some}[1]{\wrapp{MaterialGrey600}{\langle}{\rangle}{#1}}

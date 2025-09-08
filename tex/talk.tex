@@ -7,6 +7,7 @@
 \usepackage{ebproof}
 \usepackage{unicode-math-input}
 \usepackage{MnSymbol}
+% \usepackage{fdsymbol}
 \usepackage{stmaryrd}
 \usepackage{mathtools}
 \usepackage{amssymb}
@@ -258,7 +259,7 @@ unsat
 	\end{itemize}
 \end{frame}
 
-\subsection{Eunoia}
+\section{Eunoia}
 
 \begin{frame}
 	\begin{itemize}
@@ -284,38 +285,23 @@ unsat
 	\end{itemize}
 \end{frame}
 
-\begin{frame}
-	The \alert{elaboration} of an expression determines its meaning.
-	\begin{itemize}
-		\item<+-> Eunoia has a built-in symbol $\mtt{\_}$ for higher-order application.
-
-		\item<+-> The \alert{default} elaboration strategy is a left-fold:
-		      $$\paren{s\ e_1\ \ldots\ e_n}\quad ⟹ \quad
-			      \paren{\mtt{\_}\ \paren{\ldots\paren{\mtt{\_}\ s\ e_1}\ldots}\ \ e_n}$$
-
-		\item<+-> In general, strategy depends on the \alert{attributes} of symbols:
-		      $$
-			      \begin{array}{l@{\ }c@{\ }l}
-				      ν ∈ \mbf{attr_v} & ⩴   & \mtt{:implicit} ∣ \mtt{:list}
-				      \\[2mm]
-				      α ∈ \mbf{attr_c} & ⩴   & \mtt{:right-assoc} ∣ \mtt{:right-assoc-nil}\some{t}                        \\
-				                       & {∣} & \mtt{:left-assoc} ∣ \mtt{:left-assoc-nil}\some{t}                          \\
-				                       & {∣} & \mtt{:chainable}\some{s} ∣ \mtt{:pairwise}\some{s} ∣ \mtt{:binder}\some{s}
-			      \end{array}
-		      $$
-
-	\end{itemize}
-\end{frame}
 
 \begin{frame}[fragile]
-	Each \alert{constant declaration} has the form:
+	Eunoia has \alert{constant declarations} of the form:
 	$$\paren{\mtt{declare-const}\ s\ e\ \maybe{α}}$$
-	\begin{uncoverenv}<+->
-		Where $α$ is a \alert{constant attribute}, given thus:
+	where $α$ is a \alert{constant attribute}. i.e.,
+	$$
+		\begin{array}{l@{\ }c@{\ }l}
+			α ∈ \mbf{attr_c} & ⩴   & \mtt{:right-assoc} ∣ \mtt{:right-assoc-nil}\some{t}                        \\
+			                 & {∣} & \mtt{:left-assoc} ∣ \mtt{:left-assoc-nil}\some{t}                          \\
+			                 & {∣} & \mtt{:chainable}\some{s} ∣ \mtt{:pairwise}\some{s} ∣ \mtt{:binder}\some{s}
+			\\[2mm]
+		\end{array}
+	$$
 
-	\end{uncoverenv}
 	\begin{uncoverenv}<+->
-		\exxample Declaring the type and attribute of the \mtt{and} symbol.
+		\exxample Declare \mtt{and} right-associative,
+		with \emph{nil terminator} \mtt{true}.
 		\begin{lstlisting}
 (declare-const and (-> Bool Bool Bool)
   :right-assoc-nil true
@@ -323,6 +309,96 @@ unsat
 	\end{uncoverenv}
 \end{frame}
 
+\begin{frame}[fragile]
+	\begin{uncoverenv}<+->
+		Hereinafter, applications of \mtt{and} are elaborated thus:\\
+		$$\text{\smt{(and p q r)}}
+			⟹ \text{\smt{(and p (and q (and r true)))}}$$
+		% tikz diagram of
+		%   `(and p q r)`
+		% elaborating to
+		%   `(and p (and q (and r true)))`
+	\end{uncoverenv}
+\end{frame}
+
+
+
+\begin{frame}[fragile]
+	We can also declare \alert{parameterized constants}:
+	$$ \paren{\mtt{declare-parameterized-const}
+		\ s
+		\  \paren{\plur ρ n}
+		\  {e}
+		\ \maybe{α}
+		} $$
+	\begin{uncoverenv}<+->
+		where $ρ$ is a \alert{(typed) parameter}. i.e.,
+		$$
+			\begin{array}{l@{\ }c@{\ }l}
+				ρ ∈ \mbf{param}  & ⩴ & \paren{s\ t\ \maybe{ν}}       \\
+				ν ∈ \mbf{attr_v} & ⩴ & \mtt{:implicit} ∣ \mtt{:list}
+			\end{array}
+		$$
+
+	\end{uncoverenv}
+	\begin{uncoverenv}<+->
+		\exxample Constant declaration for equality.
+		\begin{lstlisting}
+(declare-parameterized-const =
+  ((A Type :implicit)) (-> A A Bool)
+  :chainable and
+)\end{lstlisting}
+	\end{uncoverenv}
+\end{frame}
+
+
+\begin{frame}
+	Eunoia can \alert{define} symbols with macro behaviour:
+	$$\paren{\mtt{define}
+			\ s
+			\  \paren{\plur ρ n}
+			\ e
+			\ \maybe{\mtt{:type}\ t}
+		}$$
+\end{frame}
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> Eunoia has literals.
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> Eunoia has type declarations.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> Eunoia has programs.
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> Eunoia has programs.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> Eunoia has built-in programs.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> Eunoia has rule declarations.
+	\end{itemize}
+\end{frame}
 % \begin{frame}
 % 	In general, expressions are either \alert{terms}, \alert{types}, or \alert{kinds}.
 % 	\begin{itemize}
@@ -356,9 +432,211 @@ unsat
 % \end{itemize}
 
 
-\subsection{LambdaPi}
+
+% \end{uncoverenv}
+
+\section{LambdaPi}
+
+% switch to purple colour here
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> LambdaPi terms are those of the $λΠ$-calculus.
+		      %
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> We can define symbols.
+		      %
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> We can define rewrite rules.
+		      %
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> We encode types and terms with $\mbf{Set}$ and $\mbf{El}$.
+		      %
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> We encode logic and proofs with $\mbf{Prop}$ and $\mbf{Prf}$.
+		      %
+	\end{itemize}
+\end{frame}
 
 \section{Translation}
+
+\newcommand{\tra}[1]{\llbracket\,#1\,\rrbracket}
+\newcommand{\ki}[1]{{\tra{#1}}_{\mbf{ki}}}
+\newcommand{\ty}[1]{{\tra{#1}}_{\mbf{ty}}}
+\newcommand{\rawapp}[2]{\paren{\mtt{\_}\ {#1}\ {#2}}}
+
+\begin{frame}
+	Track \alert{attributes} of symbols during translation:
+	$$γ : 𝒮 ⇀ (\mbf{attr_c} ∪ \mbf{attr_v})$$
+	Expressions are first elaborated with $\mbf{elab}_{γ} : \mbf{eo} → \mbf{eo}$.
+	\begin{itemize}
+		\item<+-> Eunoia has a built-in symbol $\mtt{\_}$ for (higher-order) application.
+
+		\item<+-> The \alert{default} elaboration strategy is to left-fold:
+		      $$
+			      \begin{array}{r@{\ =\ }l}
+				      \mbf{elab}_{γ}\paren{s\ e_1\ \ldots\ e_n}
+				       & ((s ∗ e_1) ∗ \ldots ∗ e_n)
+				      \\
+				       & \paren{\mtt{\_}\ \paren{\ldots\paren{\mtt{\_}\ s\ e_1}\ldots}\ \ e_n}
+			      \end{array}
+		      $$
+
+		\item<+-> In general, strategy depends on attributes, e.g.,
+		      $$ \mbf{elab}_{γ}\paren{\mtt{and}\ p\ q \ r} =
+			      (\mtt{and}\ p ∗ (\mtt{and}\ q ∗ (\mtt{and}\ r ∗ \mtt{true})))
+		      $$
+
+		      % $$
+		      %  \begin{array}{l@{\ }c@{\ }l}
+		      %   α ∈ \mbf{attr_c} & ⩴   & \mtt{:right-assoc} ∣ \mtt{:right-assoc-nil}\some{t}                        \\
+		      %                    & {∣} & \mtt{:left-assoc} ∣ \mtt{:left-assoc-nil}\some{t}                          \\
+		      %                    & {∣} & \mtt{:chainable}\some{s} ∣ \mtt{:pairwise}\some{s} ∣ \mtt{:binder}\some{s}
+		      %   \\[2mm]
+		      %   ν ∈ \mbf{attr_v} & ⩴   & \mtt{:implicit} ∣ \mtt{:list}
+		      %  \end{array}
+		      % $$
+	\end{itemize}
+\end{frame}
+
+% \begin{frame}
+% 	Track target \alert{universe} of symbols by $μ : 𝒮 ⇀ \{ \mbf{tm}, \mbf{ty}, \mbf{ki} \}$,
+% 	e.g., $$ μ(\mtt{Bool}) = \mbf{ty} \qquad μ(\mtt{Type}) = \mbf{ki} $$
+% 	%
+% 	\begin{uncoverenv}<+->%
+% 		Extend to Eunoia expressions thus:
+% 		$$
+% 			\begin{array}{r@{\ =\ }l}
+% 				μ\paren{\mtt{->}\ {\plur e n}} &
+% 				\begin{dcases}
+% 					\ \mbf{ki} & \text{if $e_n = \mtt{Type}$,} \\
+% 					\ \mbf{ty} & \text{otherwise}
+% 				\end{dcases}
+% 				\\[5mm]
+% 				μ\paren{s\ \plur e n}          &
+% 				μ(s)
+% 			\end{array}
+% 		$$
+% 	\end{uncoverenv}
+% \end{frame}
+
+\begin{frame}
+	\begin{uncoverenv}<+->
+		Translate \alert{kinds} into LambdaPi types via
+		${\tra\cdot}_{\mbf{ki}} : \mbf{eo} → \mbf{lp}$;
+		$$
+			\begin{array}{r@{\ =\ }l}
+				\ki{\mtt{Type}}                    & \mtt{Set} \\[3mm]
+				% \begin{dcases}
+				% 	\ \mtt{Set} & \text{if}\ $s = $,
+				% 	\\
+				% 	\ \ty{s}    & \text{otherwise}
+				% \end{dcases}
+
+				%
+				\ki{\paren{\mtt{->}\ {\plur e n}}} &
+				\ki{e_1} → \ldots → \ki{e_n}                   \\[3mm]
+				% \begin{dcases}
+				% 	\ \mtt{Set} & \text{if}\ $s = $,
+				% 	\\
+				% 	\ \ty{s}    & \text{otherwise}
+				% \end{dcases}
+
+				%
+				\ki{e'}                            &
+				\mtt{El}\ \ty{e'}
+			\end{array}
+		$$
+		\begin{uncoverenv}<+->%
+			\exxample Consider the translation of the following Eunoia kind.
+			$$
+				\ki{\paren{\mtt{->}\ \mtt{Int}\ \mtt{Type}}} =
+				\left(\mtt{El}\ \ty{\mtt{Int}} → \mtt{Set}\right)
+			$$
+		\end{uncoverenv}
+		% where $u_i ≔ μ(e_i)$ for each $i ∈ \{1 \ldots n\}$.
+	\end{uncoverenv}
+\end{frame}
+
+\begin{frame}
+	\begin{uncoverenv}<+->%
+		Type declarations are translated thus:
+		$$
+			\begin{array}{c}
+				\paren{\mtt{declare-type}\ t\ \paren{\plur e n}}
+				\\[2mm]
+				⇓
+				\\[2mm]
+				\mtt{symbol}\ {t} : \ki{e_1} → \ldots → \ki{e_n} → \mtt{Set};
+			\end{array}
+		$$
+	\end{uncoverenv}
+	\\
+	\begin{uncoverenv}<+->%
+		\exxample
+	\end{uncoverenv}
+\end{frame}
+
+
+\begin{frame}
+	\begin{uncoverenv}<+->
+		Translate \alert{types} to LambdaPi sets via
+		${\tra\cdot}_{\mbf{ty}} : \mbf{eo} → \mbf{lp}$;
+		$$
+			\begin{array}{r@{\ =\ }l}
+				% \begin{dcases}
+				% 	\ \mtt{Set} & \text{if}\ $s = $,
+				% 	\\
+				% 	\ \ty{s}    & \text{otherwise}
+				% \end{dcases}
+
+				%
+				\ty{\paren{\mtt{->}\ {\plur e n}}} &
+				\ty{e_1} \leadsto \ldots \leadsto \ty{e_n}
+			\end{array}
+		$$
+
+	\end{uncoverenv}
+\end{frame}
+
+
+\begin{frame}
+\end{frame}
+
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> Track \alert{attributes} of symbols during translation:
+		      % $$γ : 𝒮 → (\mbf{attr_c} ∪ \mbf{attr_v})$$
+
+		\item<+-> Terms are translated wrt.
+		      %
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\begin{itemize}
+		\item<+-> Term translation function $\msf{tr}_γ : \mbf{eo} → \mbf{lp}$.
+
+	\end{itemize}
+\end{frame}
+
 
 \section{Results}
 
