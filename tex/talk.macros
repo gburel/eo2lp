@@ -1,4 +1,4 @@
-
+\newcommand{\eo}[1]{\mtt{eo::#1}}
 \newcommand{\cpc}{\mathsf{CPC}}
 
 \lstdefinelanguage{smtlib}{
@@ -14,12 +14,12 @@
 			declare-rule, program,
 			assume, step, par, unknown
 		},
-	alsoletter={-, +,-,*,/,=,>,<,>=,<=,=>},
+	alsoletter={-,+,-,*,/,=,>,<,>=,<=,=>,\~},
 	extendedchars=true,
 	sensitive=true,
 	morecomment=[l]{;},  % Line comments start with ;
 	morestring=[b]",      % Strings are enclosed in "
-	morestring=[b]|,      % Symbols are enclosed in |
+	% morestring=[b]|,      % Symbols are enclosed in |
 	morekeywords=[2]{ite, distinct, true, false, not, or, and, xor, forall, exists, choose, lambda, let, as}, % logic keywords
 	morekeywords=[3]{Type, Bool, Int, Real, List, BitVec, FloatingPoint},  % types
 	morekeywords=[4]{+,-,*,/,=,>,<,>=,<=,=>},  % infix operators
@@ -33,7 +33,7 @@
 	stringstyle=\color{violet},       % String color
 	numberstyle=\color{violet},       % Numeric constants color
 	basicstyle=\ttfamily\footnotesize,             % Use a monospaced font
-	moredelim=[is][\itshape]{|}{|},   % Enclose symbols in vertical bars in italics
+	% moredelim=[is][\itshape]{|}{|},   % Enclose symbols in vertical bars in italics
 	numbers=left,                     % Line numbers on the left
 	numberstyle=\tiny\color{gray},    % Line numbers style
 	stepnumber=1,                     % Line numbers step
@@ -42,14 +42,14 @@
 	breaklines=false,                   % Automatically break long lines
 	keepspaces=true,
 	showlines=false,
-	mathescape=true,
+	mathescape=false,
 	numberblanklines=false
 }
 
 % For inline SMT-LIB code
 \newcommand{\smt}[1]{\lstinline[language=smtlib]{#1}}
 \newcommand{\exxample}{{\mediumfont\itshape{\textcolor{MaterialGreen900}{Example.} }}}
-\setbeamercolor*{structure}{fg=MaterialBlue800}
+\setbeamercolor*{structure}{fg=MaterialIndigo400}
 \lstset{language=smtlib}
 
 \newcommand{\binddot}[3]{#1\,#2.\,#3}
@@ -118,3 +118,10 @@
 \newcommand{\many}[1]{\wrapp{MaterialGrey600}{\langle}{\rangle_+}{#1}}
 \newcommand{\any}[1]{\wrapp{MaterialGrey600}{\langle}{\rangle_∗}{#1}}
 \newcommand{\some}[1]{\wrapp{MaterialGrey600}{\langle}{\rangle}{#1}}
+
+\newcommand{\lBrace}{{\lbrace}\hspace{-2.5pt}{\mid}}
+\newcommand{\rBrace}{{\mid}\hspace{-2.5pt}{\rbrace}}
+\newcommand{\iden}[1]{\wrapp{MaterialGrey600}{\lBrace\,}{\,\rBrace}{#1}}
+
+\newcommand{\bappcomma}{{\color{MaterialGrey600}{,}}}
+\newcommand{\bapp}[3]{\mtt{#1}\ {#2} ∗ {#3}}

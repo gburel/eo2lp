@@ -1,0 +1,167 @@
+% custom environment for subfigures
+\newenvironment{cmdsubfig}[2]{%
+	\begin{subfigure}[t]{\textwidth}
+		\subcaption{\label{#1}#2}
+		\captionsetup{subrefformat=parens}
+		\centering
+		\vspace{1mm}
+		}{%
+		\vspace{1mm}
+	\end{subfigure}
+}
+
+% font faces
+\newcommand{\msf}{\mathsf}
+\newcommand{\mbf}{\mathbf}
+\newcommand{\mscr}{\mathscr}
+\newcommand{\mtt}[1]{{\color{MaterialPink500}{\texttt{#1}}}}
+\newcommand{\mcomment}[1]{{\color{MaterialIndigo500}{\text{#1}}}}
+\newcommand{\wrapp}[4]{
+	{\color{#1}{#2}}{#4}{\color{#1}{#3}}}
+\newcommand{\paren}[1]{\wrapp{MaterialGrey600}{\lparen}{\rparen}{#1}}
+
+\newcommand{\eo}{\msf{eo}}
+
+% ----- abstract syntax ----------
+% plurality, binding
+\newcommand{\plur}[2]{{#1}_{1}\ldots{#1}_{#2}}
+\newcommand{\plurcomma}[2]{{#1}_{1}, \ldots, {#1}_{#2}}
+\newcommand{\maybe}[1]{\wrapp{MaterialGrey600}{\langle}{\rangle_?}{#1}}
+\newcommand{\many}[1]{\wrapp{MaterialGrey600}{\langle}{\rangle_+}{#1}}
+\newcommand{\any}[1]{\wrapp{MaterialGrey600}{\langle}{\rangle_∗}{#1}}
+\newcommand{\some}[1]{\wrapp{MaterialGrey600}{\langle}{\rangle}{#1}}
+
+\newcommand{\binddot}[3]{{#1\,#2.\,#3}}
+
+% eunoia symbols
+\newcommand{\sym}[1]{\msf{s}_{\msf{#1}}}
+\newcommand{\eoapp}[2]{\paren{#1\ #2}}
+
+\newcommand{\eoTermSyntax}{
+	\begin{array}[t]{r@{\ }l@{\quad}l@{\qquad}r@{\ }l@{\quad}l}
+		%!----------------------------------------!%
+		s & {⦂}\ \sym 0 ∣ \sym 1 ∣ \ldots
+		  & \mcomment{(symbols)}                  &
+		e & {⦂}\ s \mid \paren{{s}\,\many{e}}
+		  & \mcomment{(terms)}
+		\\[1mm]
+		ν & {⦂}\ \mtt{:implicit} \mid \mtt{:list}
+		  & \mcomment{(var. attributes)}          &
+		ρ & {⦂}\ \paren{s\ e\ \maybe{ν}}\qquad
+		  & \mcomment{(parameters)}
+		\\[1mm]
+		α &
+		\multicolumn{4}{@{}l}{
+			\begin{array}[t]{@{}l@{\ }l@{\quad}r}
+				{⦂} &
+				\mtt{:right-assoc} ∣ \mtt{:right-assoc-nil}\some{t} \\
+				{∣} &
+				\mtt{:left-assoc} ∣ \mtt{:left-assoc-nil}\some{t}   \\
+				{∣} &
+				\mtt{:chainable}\some{s} ∣
+				\mtt{:pairwise}\some{s} ∣
+				\mtt{:binder}\some{s}
+			\end{array}
+		}
+		  &
+		\mcomment{(const. attributes)}
+	\end{array}
+}
+
+\newcommand{\eoCommandSyntax}{
+	\begin{array}[t]{r@{\ }l}
+		δ
+		 &
+		\begin{array}[t]{c@{\ }l}
+			{⦂} &
+			\paren{\mtt{declare-const}\ s\ e\ α}
+			\\
+			{∣} & \paren{\mtt{declare-consts}\ ℓ\ e}
+			\\
+			{∣} &
+			\paren{\mtt{declare-parameterized-const}\ s\ {\vec ρ}\ e\ α}
+			\\
+			{∣} &
+			{\color{MaterialGrey600}{\big\lparen}}
+			\mtt{declare-rule}\ s\ \any{ρ}\
+			\\ & \quad
+			\maybe{\mtt{:assumption}\,e}\
+			\\ & \quad
+			\maybe{\mtt{:premises}\,\any{φ}}\
+			\\ & \quad
+			\maybe{\mtt{:args}\,\any{e}}\
+			\\ & \quad
+			\maybe{\mtt{:requires}\,{\many{e,e'}}}\
+			\\ & \quad
+			\mtt{:conclusion}\,{ψ}
+				{\color{MaterialGrey600}{\big\rparen}}
+			\\
+			{∣} &
+			\paren{\mtt{declare-type}\ {s}\ \paren{\any e}}
+			\\
+			{∣} &
+			\paren{\mtt{define}\ {s}
+			\ \maybe{\vec ρ}
+			\ e\
+			\ \maybe{\mtt{:type}\,e'}}
+			\\
+			{∣} &
+			\paren{\mtt{define-type}\ {s}
+			\ \paren{\any e}
+			\ e'}
+			\\
+			{∣} &
+			\paren{\mtt{include}\ \some{\msf{string}}}
+			\\
+			{∣} &
+			\paren{\mtt{program}\ x
+				\ \any{ρ}
+				\ \some{\mtt{:signature}\,\paren{\many{e}}\,e'}
+				\ \paren{\many{e\ e'}}
+			}
+		\end{array}
+	\end{array}}
+
+\newcommand{\eoPrfCommandSyntax}{
+	\begin{array}[t]{r@{\ }l}
+		π
+		 &
+		\begin{array}[t]{c@{\ }l}
+			{⦂} & \paren{\mtt{assume}\ s\ e}
+			\\
+			{∣} & \paren{\mtt{assume-push}\ s\ e}
+			\\
+			{∣} & \paren{\mtt{step}\ s\ \maybe{e}\
+			\paren{\mtt{:rule}\ s_r}\
+			\maybe{\mtt{:premises}\ {\vec φ}}\
+			\maybe{\mtt{:args}\ {\vec e}}
+			}
+			\\
+			{∣} & \paren{\mtt{step-pop}\ s\ \maybe{e}\
+			\paren{\mtt{:rule}\ {s_r}}\
+			\maybe{\mtt{:premises}\ {\vec φ}}\
+			\maybe{\mtt{:args}\ {\vec e}}
+			}
+		\end{array}
+	\end{array}}
+
+% binders
+\newcommand{\lam}{\binddot{\msf{λ}}}
+\newcommand{\pii}{\binddot{\msf{Π}}}
+\newcommand{\alam}[1]{\binddot{\msf{λ}^{#1}}}
+\newcommand{\apii}[1]{\binddot{\msf{Π}^{#1}}}
+
+\newcommand{\lett}[2]{\msf{let}\ \paren{#1}\,\msf{in}\ #2}
+% applications
+\newcommand{\appSym}{\cdot}
+\newcommand{\app}[2]{{#1}\appSym{#2}}
+\newcommand{\apptwo}[3]{#1\,#2\,#3}
+\newcommand{\appthree}[4]{#1\,#2\,#3\,#4}
+\newcommand{\appfour}[5]{#1\,#2\,#3\,#4\,#5}
+\newcommand{\appldots}[3]{((\app{#1}{#2})\,\ldots\,{#3})}
+% universes
+\newcommand{\PROP}{\mtt{prop}}
+\newcommand{\TYPE}{\mtt{type}}
+\newcommand{\KIND}{\mtt{kind}}
+% sets for syntactic categories
+\newcommand{\Term}{\msf{Term}}

@@ -20,7 +20,7 @@
 %   ItalicFont=Alegreya-Italic.otf,
 %   BoldItalicFont=Alegreya-BoldItalic.otf]
 
-\title{Eunoia to LambdaPi}
+\title{\texttt{eo2lp} \textit{--- from Eunoia to LambdaPi}}
 \author{Ciarán Dunne and Guillaume Burel}
 \institute{ENS Paris-Saclay, INRIA}
 
@@ -33,126 +33,29 @@
 
 \section{Background}
 
-\begin{frame}[fragile, plain]{Background}
-	\begin{itemize}
-		\item<+-> \alert{Satisfiability modulo theories} (SMT)
-		      is an area of automated reasoning aimed at
-		      developing tools for deciding the satisfiability
-		      of formulas within a curated selection of
-		      first-order mathematical theories.
-		      %
-		\item<+-> \alert{SMT-LIB} (v2.7) is a standardized
-		      formal language for satisfiability problems
-		      and theory documentation.
-	\end{itemize}
-	%
-	\begin{uncoverenv}<+->
-		\exxample
-		Find $x,y ∈ ℤ$ such that $(x + 2y) = 20$ and $(x - y) = 2$.
-		\begin{lstlisting}
-(set-logic QF_LIA)
-(declare-const x Int)
-(declare-const y Int)
-(assert (= (+ x (* 2 y)) 20))
-(assert (= (- x y) 2))
-(check-sat)
-(exit)\end{lstlisting}
-	\end{uncoverenv}
-\end{frame}
 
-\begin{frame}[fragile, plain]
-	\begin{uncoverenv}<+->
-		\exxample
-		The example problem is \alert{satisfiable}.
-		Hence, \texttt{cvc5} can return a \alert{solution}
-		assigning concrete values to free variables.
-	\end{uncoverenv}
-	%
-	\begin{uncoverenv}<+->
-		\begin{lstlisting}
-(set-logic QF_LIA)
-(set-option :produce-models true)
-(declare-const x Int)
-(declare-const y Int)
-(assert (= (+ x (* 2 y)) 20))
-(assert (= (- x y) 2))
-(check-sat)
-(exit)
-\end{lstlisting}
-		\hrule
-		\begin{lstlisting}
-sat
-(
-  (define-fun x () Int 8)
-  (define-fun y () Int 6)
-)\end{lstlisting}
-	\end{uncoverenv}
-\end{frame}
-
-\begin{frame}[fragile, plain]
-	\begin{uncoverenv}<+->
-		\exxample
-		The following problem is \alert{unsatisfiable}.
-		In this case, \texttt{cvc5} can provide a \alert{proof} demonstrating this.
-	\end{uncoverenv}
-	\begin{uncoverenv}<+->
-		\begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
-(set-logic QF_UF)
-(set-option :produce-proofs true)
-(declare-const p Bool)
-(assert (and p (not p)))
-(check-sat)
-(get-proof)
-(exit)\end{lstlisting}
-		\hrule
-		\begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
-unsat
-(declare-fun p () Bool)
-(assume @p1 (and p (not p)))
-(step @p2 :rule and_elim :premises (@p1) :args (1))
-(step @p3 :rule and_elim :premises (@p1) :args (0))
-(step @p4 false :rule contra :premises (@p3 @p2))\end{lstlisting}
-	\end{uncoverenv}
-	\begin{uncoverenv}<+->
-		\textbf{What is the formal meaning of this proof?}
-	\end{uncoverenv}
-	\\
-	\begin{uncoverenv}<+->
-		\textbf{In general, what rules may be used in a proof?}
-	\end{uncoverenv}
-\end{frame}
+% need to mention why Alethe precedes Eunoia.
+%
+% \begin{frame}[fragile, plain]{Why Eunoia?}
+% 	\begin{itemize}
+% 		\item<+-> What about Alethe?
+% 		      \begin{itemize}
+% 			      \item<+-> inference rules only exist \emph{in papyro}.
+% 			      \item<+-> missing details needed for reconstruction.
+% 			      \item<+->
+% 			            \textbf{Coltellacci and Merz}: extend \alert{Carcara}
+% 			            to support LambdaPi output.
+% 		      \end{itemize}
+% 	\end{itemize}
+% \end{frame}
+%
 
 
-\begin{frame}[fragile, plain]
-	% tikz diagram here for the dir-tree of eo/cpc/...
-	% tikz diagram for proof output by cvc5, checked by ethos.
-	\begin{itemize}
-		\item<+-> The \alert{co-operating proof calculus} (CPC)
-		      is \texttt{cvc5}'s proof system.
-		      \begin{itemize}
-			      \item[\emoji{angel}]<+-> faithful to the internal reasoning of \texttt{cvc5}.
-			      \item[\emoji{elephant}]<+-> not small (${>}\ 100$ inference rules).
-			      \item[\emoji{puzzle-piece}] some rules take arguments, some have side-conditions.
-		      \end{itemize}
-	\end{itemize}
-	%
-	\begin{uncoverenv}<+->
-		\exxample A CPC rule for elimination on $n$-ary conjunctions,
-		where $φ_1 \ldots φ_n$ are formulas and $i ∈ ℕ$.
-		\[
-			\begin{prooftree}
-				\hypo{(φ_1 ∧ \ldots ∧ φ_n) ∣ i}
-				\infer1{φ_i}
-			\end{prooftree}
-		\]
-	\end{uncoverenv}
-	\\
-	\begin{uncoverenv}<+->
-		\textbf{How and where are these rules specified?}
-	\end{uncoverenv}
-\end{frame}
+% Cite Reynolds talk.
+% Also need to discuss LFSC.
+%
 
-\begin{frame}[fragile, plain]{Eunoia and Ethos}
+\begin{frame}[fragile]{Eunoia and Ethos}
 	\begin{itemize}
 		\item<+->
 		      \alert{Eunoia} is an emerging \emph{logical framework} aimed at
@@ -166,34 +69,34 @@ unsat
 
 		\item<+-> Extends SMT-LIB by adding:
 		      \begin{itemize}
-			      \item<+->(dependent) types, parametric polymorphism
-			      \item<+->`programs' (i.e., constants with rewrite rules)
-			      \item<+->inference rules, commands for building proofs
+			      \item<+->(dependent) types, parametric polymorphism,
+			      \item<+->`programs' (i.e., constants with rewrite rules),
+			      \item<+->inference rule declarations,
+			      \item<+->commands for building proof scripts.
 		      \end{itemize}
 	\end{itemize}
 \end{frame}
 
-\begin{frame}[fragile, plain]
-	% tikz diagram here for the dir-tree of eo/cpc/...
-	% tikz diagram for proof output by cvc5, checked by ethos.
-	\begin{itemize}
-		\item<+-> The \alert{co-operating proof calculus}
-		      (i.e., CPC, the proof system of \texttt{cvc5})
-		      is formalized as a Eunoia signature $Σ_{\cpc}$.
 
-		\item<+-> Proofs produced by \texttt{cvc5} are
-		      Eunoia proof scripts that exclusively use
-		      the inference rules from $Σ_{\cpc}$.
-	\end{itemize}
-\end{frame}
 
-\begin{frame}[fragile, plain]{LambdaPi}
+
+% How are ATPs currently connected to LambdaPi. `why3`?
+
+% - 'formal semantics' for Eunoia.
+% - typecheck the signature for Eunoia proof systems
+% - proof check the proofs for Eunoia proof scripts.
+
+% - verification of CPC itself wrt. some other logic.
+
+% - using cvc5 as a ATP backend for LambdaPi logics.
+\begin{frame}[fragile]{LambdaPi}
 	\begin{itemize}
 		\item<+-> Logical framework based
 		      on the \emph{$λΠ$-calculus modulo rewriting}.
 		      \begin{itemize}
 			      \item[\emoji{flag-france}]<+-> development led by Frédéric Blanqui, INRIA Paris-Saclay
-			      \item[\emoji{locked}]<+-> small and fast, trusted code base.
+			      \item[\emoji{locked}]<+-> small code base, trusted foundations.
+			      \item[\emoji{leopard}]<+-> fast typechecker.
 			      \item[\emoji{robot}]<+-> interactive theorem proving via LSP!
 		      \end{itemize}
 
@@ -231,23 +134,145 @@ unsat
 	\end{figure}
 \end{frame}
 
-\begin{frame}[fragile, plain]{Why Eunoia?}
+\begin{frame}{The Co-operating Proof Calculus}
+	% tikz diagram here for the dir-tree of eo/cpc/...
+	% tikz diagram for proof output by cvc5, checked by ethos.
 	\begin{itemize}
-		\item<+-> What about Alethe?
+		\item<+-> The \alert{co-operating proof calculus} (CPC)
+		      is \texttt{cvc5}'s proof system.
 		      \begin{itemize}
-			      \item<+-> inference rules only exist \emph{in papyro}.
-			      \item<+-> missing details needed for reconstruction.
-			      \item<+->
-			            \textbf{Coltellacci and Merz}: extend \alert{Carcara}
-			            to support LambdaPi output.
+			      \item[\emoji{sparkles}]<+-> formalized as a Eunoia signature $Σ_{\cpc}$.
+			      \item[\emoji{elephant}]<+-> not small (${>}\ 600$ inference rules).
+			      \item[\emoji{puzzle-piece}]<+-> some rules take arguments, some have side-conditions.
 		      \end{itemize}
+
+		\item<+-> Proofs produced by \texttt{cvc5} are
+		      Eunoia \alert{proof scripts} that exclusively use
+		      the rules from $Σ_{\cpc}$.
 	\end{itemize}
+	%
 \end{frame}
+
+\begin{frame}[plain, fragile]
+	\begin{uncoverenv}<+->%
+		\exxample A CPC rule for \alert{elimination on $n$-ary conjunctions},
+		where $φ_1 \ldots φ_n$ are formulas and $i ∈ ℕ$.
+		$$
+			\begin{prooftree}
+				\hypo{(φ_1 ∧ \ldots ∧ φ_n) ∣ i}
+				\infer1{φ_i}
+			\end{prooftree}
+			\quad\mcomment{(and\_elim)}
+		$$
+	\end{uncoverenv}
+	\\
+	\begin{uncoverenv}<+->%
+		The rule is \alert{formalized} in Eunoia thus:
+		\begin{lstlisting}
+(declare-rule and_elim ((Fs Bool) (i Int))
+    :premises (Fs)
+    :args (i)
+    :conclusion (eo::list_nth and Fs i)
+)\end{lstlisting}
+	\end{uncoverenv}
+\end{frame}
+
+% \begin{frame}[fragile, plain]{Background}
+% 	\begin{itemize}
+% 		\item<+-> \alert{Satisfiability modulo theories} (SMT)
+% 		      is an area of automated reasoning aimed at
+% 		      developing tools for deciding the satisfiability
+% 		      of formulas within a curated selection of
+% 		      first-order mathematical theories.
+% 		      %
+% 		\item<+-> \alert{SMT-LIB} (v2.7) is a standardized
+% 		      formal language for satisfiability problems
+% 		      and theory documentation.
+% 	\end{itemize}
+% 	%
+% 	\begin{uncoverenv}<+->
+% 		\exxample
+% 		Find $x,y ∈ ℤ$ such that $(x + 2y) = 20$ and $(x - y) = 2$.
+% 		\begin{lstlisting}
+% (set-logic QF_LIA)
+% (declare-const x Int)
+% (declare-const y Int)
+% (assert (= (+ x (* 2 y)) 20))
+% (assert (= (- x y) 2))
+% (check-sat)
+% (exit)\end{lstlisting}
+% 	\end{uncoverenv}
+% \end{frame}
+
+% \begin{frame}[fragile, plain]
+% 	\begin{uncoverenv}<+->
+% 		\exxample
+% 		The example problem is \alert{satisfiable}.
+% 		Hence, \texttt{cvc5} can return a \alert{solution}
+% 		assigning concrete values to free variables.
+% 	\end{uncoverenv}
+% 	%
+% 	\begin{uncoverenv}<+->
+% 		\begin{lstlisting}
+% (set-logic QF_LIA)
+% (set-option :produce-models true)
+% (declare-const x Int)
+% (declare-const y Int)
+% (assert (= (+ x (* 2 y)) 20))
+% (assert (= (- x y) 2))
+% (check-sat)
+% (exit)
+% \end{lstlisting}
+% 		\hrule
+% 		\begin{lstlisting}
+% sat
+% (
+%   (define-fun x () Int 8)
+%   (define-fun y () Int 6)
+% )\end{lstlisting}
+% 	\end{uncoverenv}
+% \end{frame}
+
+\begin{frame}[fragile, plain]
+	\begin{uncoverenv}<+->
+		\exxample
+		The following problem is \alert{unsatisfiable}.
+		In this case, \texttt{cvc5} can provide a \alert{proof} demonstrating this.
+	\end{uncoverenv}
+	\begin{uncoverenv}<+->
+		\begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
+(set-logic QF_UF)
+(set-option :produce-proofs true)
+(declare-const p Bool)
+(assert (and p (not p)))
+(check-sat)
+(get-proof)
+(exit)\end{lstlisting}
+	\end{uncoverenv}
+	\hrule
+	\begin{uncoverenv}<+->
+		\begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
+unsat
+(declare-fun p () Bool)
+(assume @p1 (and p (not p)))
+(step @p2 :rule and_elim :premises (@p1) :args (1))
+(step @p3 :rule and_elim :premises (@p1) :args (0))
+(step @p4 false :rule contra :premises (@p3 @p2))\end{lstlisting}
+	\end{uncoverenv}
+	% \begin{uncoverenv}<+->
+	% 	\textbf{What is the formal meaning of this proof?}
+	% \end{uncoverenv}
+	% \\
+	% \begin{uncoverenv}<+->
+	% 	\textbf{In general, what rules may be used in a proof?}
+	% \end{uncoverenv}
+\end{frame}
+
 
 \begin{frame}{}
 	\begin{itemize}
 		\item<+-> \emph{\color{oc-green-9}Goal:}
-		      Design a translation procedure $T$ such that:
+		      Design a translation procedure $T$ such that;
 		      \begin{itemize}
 			      \item<+-> if $Σ$ is a Eunoia signature implementing some \alert{logic} $L$,
 			      \item<+-> then $T(Σ)$ is a LambdaPi signature also implementing $L$.
@@ -259,7 +284,16 @@ unsat
 	\end{itemize}
 \end{frame}
 
+
+
 \section{Eunoia}
+
+\setbeamercolor*{structure}{fg=MaterialGreen400}
+\setbeamercolor*{background canvas}{bg=MaterialGreen400}
+\begin{frame}[standout]
+	\centering\Huge
+	\textbf{Eunoia}
+\end{frame}
 
 \begin{frame}
 	\begin{itemize}
@@ -286,6 +320,18 @@ unsat
 \end{frame}
 
 
+% Eunoia no longer has type definitions/declarations.
+\begin{frame}[fragile]
+	Eunoia has \alert{type declarations}.
+	$$\paren{\mtt{declare-type}\ s\ \paren{\plur e n}}$$
+	\\[2mm]
+	\begin{uncoverenv}<+->
+		\exxample The \mtt{Array} symbol declared a (binary) type constructor.
+		\begin{lstlisting}
+(declare-type Array (Type Type))\end{lstlisting}
+	\end{uncoverenv}
+\end{frame}
+
 \begin{frame}[fragile]
 	Eunoia has \alert{constant declarations} of the form:
 	$$\paren{\mtt{declare-const}\ s\ e\ \maybe{α}}$$
@@ -309,9 +355,18 @@ unsat
 	\end{uncoverenv}
 \end{frame}
 
+% TODO. precisely state elaboration algorithm, including :list.
 \begin{frame}[fragile]
 	\begin{uncoverenv}<+->
-		Hereinafter, applications of \mtt{and} are elaborated thus:\\
+		\exxample Declare \mtt{and} right-associative,
+		with \emph{nil terminator} \mtt{true}.
+		\begin{lstlisting}
+(declare-const and (-> Bool Bool Bool)
+  :right-assoc-nil true
+)\end{lstlisting}
+	\end{uncoverenv}
+	\begin{uncoverenv}<+->
+		The following $n$-ary application of \mtt{and} is elaborated thus:\\
 		$$\text{\smt{(and p q r)}}
 			⟹ \text{\smt{(and p (and q (and r true)))}}$$
 		% tikz diagram of
@@ -321,8 +376,7 @@ unsat
 	\end{uncoverenv}
 \end{frame}
 
-
-
+% TODO. worry about :implicit variables.
 \begin{frame}[fragile]
 	We can also declare \alert{parameterized constants}:
 	$$ \paren{\mtt{declare-parameterized-const}
@@ -342,7 +396,8 @@ unsat
 
 	\end{uncoverenv}
 	\begin{uncoverenv}<+->
-		\exxample Constant declaration for equality.
+		\exxample Implicit type parameter
+		and \mtt{:chainable} attribute.
 		\begin{lstlisting}
 (declare-parameterized-const =
   ((A Type :implicit)) (-> A A Bool)
@@ -351,54 +406,152 @@ unsat
 	\end{uncoverenv}
 \end{frame}
 
+\begin{frame}[fragile]
+	\begin{uncoverenv}<+->
+		\exxample Implicit type parameter
+		and \mtt{:chainable} attribute.
+		\begin{lstlisting}
+(declare-parameterized-const =
+  ((A Type :implicit)) (-> A A Bool)
+  :chainable and
+)\end{lstlisting}
+	\end{uncoverenv}
+	\begin{uncoverenv}<+->%
+		The following $n$-ary application of \mtt{=} is elaborated thus:
+		$$ \text{\smt{(= x y z)}} ⟹ \text{\smt{(and (= x y) (= y z))}}$$
+	\end{uncoverenv}
+\end{frame}
 
-\begin{frame}
-	Eunoia can \alert{define} symbols with macro behaviour:
+
+% app : sym → eo list → eo;
+%
+% $to_clause (app "or" [F1;F2]) ↪ ....
+%
+% $to_clause (or $F1 $F2) ↪ ....
+%
+%
+% TODO. discuss inference of :type t
+\begin{frame}[fragile]
+	Eunoia can \alert{define} symbols (with an optional type annotation):
 	$$\paren{\mtt{define}
 			\ s
 			\  \paren{\plur ρ n}
 			\ e
 			\ \maybe{\mtt{:type}\ t}
 		}$$
+	\\[2mm]
+	\begin{uncoverenv}<+->%
+		\exxample Some definition from \texttt{cpc/rules/Booleans.eo}.
+		\begin{lstlisting}
+(define $remove_maybe_self ((l Bool) (C Bool))
+  (eo::ite (eo::eq l C) false (eo::list_erase or C l))
+)\end{lstlisting}
+	\end{uncoverenv}
 \end{frame}
 
-\begin{frame}
-	\begin{itemize}
-		\item<+-> Eunoia has literals.
-	\end{itemize}
+% \begin{frame}
+% 	Eunoia has \alert{built-in programs}:
+% 	$$\eo{list\_concat} : 𝒮 → \mbf{eo} → \mbf{eo} → \mbf{eo}$$
+% \end{frame}
+
+% Need to discuss programs that involve applications of pattern vars.
+\begin{frame}[fragile]
+	Eunoia has user-defined \alert{programs}.
+	$$
+		\left(\begin{array}{l}
+				\mtt{program}\ s\ \paren{\plur ρ n}                   \\
+				\quad \mtt{:signature}\ \paren{\plur t m}\ t'         \\
+				\quad\paren{\paren{e_1\ e'_1}\ldots\paren{e_k\ e'_k}} \\
+			\end{array}\right)
+	$$
+	\\[2mm]
+	\begin{uncoverenv}<+->
+		\exxample Some program from \texttt{cpc/rules/Booleans.eo}.
+		\begin{lstlisting}
+(program $to_clause
+  ((F1 Bool) (F2 Bool :list))
+  :signature (Bool) Bool
+  (
+    (($to_clause (or F1 F2)) (or F1 F2))
+    (($to_clause false)      false)
+    (($to_clause F1)         (or F1))
+  )
+)\end{lstlisting}
+	\end{uncoverenv}
 \end{frame}
 
 
-\begin{frame}
-	\begin{itemize}
-		\item<+-> Eunoia has type declarations.
-	\end{itemize}
+% TODO. discuss future work for assume-push and step-pop.
+% use LambdaPi proof blocks.
+\begin{frame}[fragile]
+	Eunoia has \alert{rule declarations}.
+	$$
+		\left(
+		\begin{array}{l}
+				\mtt{declare-rule}\ s\ \paren{\plur ρ n}\
+				\\ \quad
+				% \maybe{\mtt{:assumption}\ e}\
+				% \\ \quad
+				\maybe{\mtt{:premises}\ \paren{\plur φ m}}\
+				\\ \quad
+				\maybe{\mtt{:args}\ \paren{\plur e k}}\
+				\\ \quad
+				% \maybe{\mtt{:requires}\ {\many{e,e'}}}\
+				% \\ \quad
+				\mtt{:conclusion}\ {ψ}
+			\end{array}
+		\right)
+	$$
+	\\[2mm]
+	\begin{uncoverenv}<+->
+		\exxample Resolution rule from \texttt{cpc/rules/Booleans.eo}.
+		\begin{lstlisting}
+(declare-rule resolution
+  ((C1 Bool) (C2 Bool) (pol Bool) (L Bool))
+  :premises (C1 C2)
+  :args (pol L)
+  :conclusion ($resolve C1 C2 pol L)
+)\end{lstlisting}
+	\end{uncoverenv}
 \end{frame}
 
-\begin{frame}
-	\begin{itemize}
-		\item<+-> Eunoia has programs.
-	\end{itemize}
+\begin{frame}[fragile]
+	For \alert{proof scripts}, we have two main commands:
+	$$	\begin{array}[t]{r@{\ }l}
+			π ∈ \mbf{prf}
+			 &
+			\begin{array}[t]{c@{\ }l}
+				{⩴} & \left(\mtt{assume}\ s\ φ\right) \\[2mm]
+				{∣} &
+				\left(\begin{array}{@{}l@{}}
+						      \mtt{step}\ s\ \maybe{ψ}\ \mtt{:rule}\ s'        \\
+						      \quad \maybe{\mtt{:premises}\ \paren{\plur φ n}} \\
+						      \quad \maybe{\mtt{:args}\ \paren{\plur e m}}     \\
+					      \end{array}\right)
+				\\
+				{∣} & \ldots
+
+				% {∣} & \paren{\mtt{assume-push}\ s\ φ}
+				% \\
+				% {∣} & \paren{\mtt{step-pop}\ s\ \maybe{e}\
+				% \paren{\mtt{:rule}\ {s_r}}\
+				% \maybe{\mtt{:premises}\ {\vec φ}}\
+				% \maybe{\mtt{:args}\ {\vec e}}
+				% }
+			\end{array}
+		\end{array}$$
+	\\[2mm]
+	% assume, step, assume-push, step-pop.
+	\begin{uncoverenv}<+->
+		\exxample
+		\begin{lstlisting}
+(assume @p1 (and p (not p)))
+(step @p2 :rule and_elim :premises (@p1) :args (1))
+(step @p3 :rule and_elim :premises (@p1) :args (0))
+(step @p4 false :rule contra :premises (@p3 @p2))\end{lstlisting}
+	\end{uncoverenv}
 \end{frame}
 
-
-\begin{frame}
-	\begin{itemize}
-		\item<+-> Eunoia has programs.
-	\end{itemize}
-\end{frame}
-
-\begin{frame}
-	\begin{itemize}
-		\item<+-> Eunoia has built-in programs.
-	\end{itemize}
-\end{frame}
-
-\begin{frame}
-	\begin{itemize}
-		\item<+-> Eunoia has rule declarations.
-	\end{itemize}
-\end{frame}
 % \begin{frame}
 % 	In general, expressions are either \alert{terms}, \alert{types}, or \alert{kinds}.
 % 	\begin{itemize}
@@ -437,54 +590,119 @@ unsat
 
 \section{LambdaPi}
 
-% switch to purple colour here
+\setbeamercolor*{structure}{fg=MaterialPurple400}
+\setbeamercolor*{background canvas}{bg=MaterialPurple400}
+\begin{frame}[standout]
+	\centering\Huge
+	\textbf{LambdaPi}
+\end{frame}
 
+% TODO. explicit arguments in applications.
+% implicit bindings for Lam and Pi.
 \begin{frame}
 	\begin{itemize}
-		\item<+-> LambdaPi terms are those of the $λΠ$-calculus.
-		      %
+		\item<+-> LambdaPi \alert{terms} are those of the $λΠ$-calculus.
+		      $$
+			      \begin{array}{l}
+				      t ∈ \mbf{term_{lp}} ⩴\ x\ ∣\ t_1 ⋅ t_2\ ∣\ \binddot{λ}{x : t_1}{t_2}\ ∣\ \binddot{Π}{x : t_1}{t_2}
+			      \end{array}
+		      $$
+		      \\[5mm]
+		\item<+-> \alert{Symbols} are declared thus:
+		      $$\mtt{symbol}\ s\ \any{ρ} : t;$$
+		      where $ρ$ ranges over LambdaPi \alert{parameters}:
+		      $$ρ ∈ \mbf{param_{lp}} ⩴ (x : t) ∣ [x : t]$$
+	\end{itemize}
+\end{frame}
+
+% TODO. Discuss type preservation of rewrite rules.
+% explain the 'sequential' modifier.
+\begin{frame}
+	\begin{itemize}
+		\item<+-> Symbols can also be \alert{defined}:
+		      $$\mtt{symbol}\ s\ \maybe{{:}\,t} ≔ t';$$
+		      \begin{uncoverenv}<+->
+			      Note that providing the type of $s$ is optional.
+		      \end{uncoverenv}
+		      \\[5mm]
+		\item<+->
+		      \alert{Rewrite rules} are declared as follows:
+		      $$\mtt{rule}\ r\ \any{\mtt{with}\ r'};$$
+		      Where $r$ ranges over $\mbf{rw} ⩴ (t ↪ t')$.
 	\end{itemize}
 \end{frame}
 
 \begin{frame}
-	\begin{itemize}
-		\item<+-> We can define symbols.
-		      %
-	\end{itemize}
-\end{frame}
-
-\begin{frame}
-	\begin{itemize}
-		\item<+-> We can define rewrite rules.
-		      %
-	\end{itemize}
-\end{frame}
-
-\begin{frame}
-	\begin{itemize}
-		\item<+-> We encode types and terms with $\mbf{Set}$ and $\mbf{El}$.
-		      %
-	\end{itemize}
-\end{frame}
-
-\begin{frame}
-	\begin{itemize}
-		\item<+-> We encode logic and proofs with $\mbf{Prop}$ and $\mbf{Prf}$.
-		      %
-	\end{itemize}
+	\begin{uncoverenv}<+->%
+		\alert{Type universes} \emph{a la Tarski}; closed under $({\leadsto})$.
+		$$
+			\begin{array}{c}
+				\mtt{Set} : \mtt{TYPE};            \qquad
+				\mtt{El} : \mtt{Set} → \mtt{TYPE}; \\[2mm]
+				(\leadsto) : \mtt{Set} → \mtt{Set} → \mtt{Set};
+			\end{array}
+		$$
+	\end{uncoverenv}
+	\\
+	\begin{uncoverenv}<+->%
+		Proofs are encoded similarly:
+		$$
+			\mtt{Prop} : \mtt{TYPE}; \qquad \mtt{Prf} : \mtt{Prop} → \mtt{TYPE};
+		$$
+	\end{uncoverenv}
+	\\
+	\begin{uncoverenv}<+->
+		\exxample%
+		$$
+			\begin{array}{l@{\ \ :\ \ }l}
+				\mtt{symbol}\ \paren{{=}}\ [a : \mtt{Set}]                   & \mtt{El}\,\paren{a \leadsto a \leadsto \mtt{Bool}};
+				\\
+				\mtt{symbol}\ \msf{refl}\ [a : \mtt{Set}]\ [x : \mtt{El}\,a] &
+				\mtt{Prf}\paren{x = x};
+			\end{array}
+		$$
+	\end{uncoverenv}
 \end{frame}
 
 \section{Translation}
 
+\setbeamercolor*{structure}{fg=MaterialRed400}
+\setbeamercolor*{background canvas}{bg=MaterialRed400}
+\begin{frame}[standout]
+	\centering\Huge
+	\textbf{Translation}
+\end{frame}
+
 \newcommand{\tra}[1]{\llbracket\,#1\,\rrbracket}
 \newcommand{\ki}[1]{{\tra{#1}}_{\mbf{ki}}}
 \newcommand{\ty}[1]{{\tra{#1}}_{\mbf{ty}}}
+\newcommand{\tm}[1]{{\tra{#1}}_{\mbf{tm}}}
 \newcommand{\rawapp}[2]{\paren{\mtt{\_}\ {#1}\ {#2}}}
 
 \begin{frame}
-	Track \alert{attributes} of symbols during translation:
-	$$γ : 𝒮 ⇀ (\mbf{attr_c} ∪ \mbf{attr_v})$$
+	\textbf{Goal:}
+	Given a Eunoia signature $Σ$,
+	generate the corresponding LambdaPi signature $T(Σ)$.
+
+	\begin{itemize}
+		\item<+-> Process each command in $Σ$,
+		      updating an environment $Θ$ as we go:
+		      $$T_{Θ}(c\,{;}\,Σ) = c\,{;}\,T_{Θ'}(Σ)$$
+
+		\item<+-> Our translation tool \texttt{eo2lp} is written in OCaml.
+		\item<+-> The following is a high-level overview.
+	\end{itemize}
+\end{frame}
+
+% \begin{frame}
+% 	We begin with an encoding of Eunoia's built-in symbols:
+% 	$$\mtt{symbol}\ \iden{Bool} : Set;$$
+% \end{frame}
+
+\begin{frame}
 	Expressions are first elaborated with $\mbf{elab}_{γ} : \mbf{eo} → \mbf{eo}$.
+	$$γ : 𝒮 ⇀ (\mbf{attr_c} ∪ \mbf{attr_v})$$
+	Where $γ$ \alert{attributes} of symbols during translation.
 	\begin{itemize}
 		\item<+-> Eunoia has a built-in symbol $\mtt{\_}$ for (higher-order) application.
 
@@ -500,7 +718,15 @@ unsat
 
 		\item<+-> In general, strategy depends on attributes, e.g.,
 		      $$ \mbf{elab}_{γ}\paren{\mtt{and}\ p\ q \ r} =
-			      (\mtt{and}\ p ∗ (\mtt{and}\ q ∗ (\mtt{and}\ r ∗ \mtt{true})))
+			      \bapp{and}{p}{
+				      \paren{
+					      \bapp{and}{q}{
+						      \paren{
+							      \bapp{and}{r}{\mtt{false}}
+						      }
+					      }
+				      }
+			      }
 		      $$
 
 		      % $$
@@ -539,112 +765,320 @@ unsat
 \begin{frame}
 	\begin{uncoverenv}<+->
 		Translate \alert{kinds} into LambdaPi types via
-		${\tra\cdot}_{\mbf{ki}} : \mbf{eo} → \mbf{lp}$;
+		${\tra\cdot}_{\mbf{ty}} : \mbf{eo} → \mbf{lp}$;
 		$$
 			\begin{array}{r@{\ =\ }l}
-				\ki{\mtt{Type}}                    & \mtt{Set} \\[3mm]
+				\ty{\mtt{Type}}                        & \mtt{Set}
+				\\[2mm]
 				% \begin{dcases}
 				% 	\ \mtt{Set} & \text{if}\ $s = $,
 				% 	\\
 				% 	\ \ty{s}    & \text{otherwise}
 				% \end{dcases}
-
+				\ty{\paren{\paren{\mtt{->}} ∗ e} ∗ e'} &
+				\ty{e} → \ty{e'}
+				\\[2mm]
 				%
-				\ki{\paren{\mtt{->}\ {\plur e n}}} &
-				\ki{e_1} → \ldots → \ki{e_n}                   \\[3mm]
-				% \begin{dcases}
-				% 	\ \mtt{Set} & \text{if}\ $s = $,
-				% 	\\
-				% 	\ \ty{s}    & \text{otherwise}
-				% \end{dcases}
-
-				%
-				\ki{e'}                            &
-				\mtt{El}\ \ty{e'}
+				\ty{e'}                                &
+				\mtt{El}\ \tm{e'}
 			\end{array}
 		$$
 		\begin{uncoverenv}<+->%
-			\exxample Consider the translation of the following Eunoia kind.
+			\exxample Consider translating the following Eunoia kind.
 			$$
-				\ki{\paren{\mtt{->}\ \mtt{Int}\ \mtt{Type}}} =
-				\left(\mtt{El}\ \ty{\mtt{Int}} → \mtt{Set}\right)
+				\begin{array}{r@{\ =\ }l}
+					\ty{\paren{\mtt{->}\ \mtt{Int}\ \mtt{Type}}}
+					 &
+					\ty{\paren{\mtt{->} ∗ \mtt{Int}} ∗ \mtt{Type}}
+					\\[2mm]
+					 & \ty{\mtt{Int}} → \ty{\mtt{Type}}
+					\\[2mm]
+					 & \mtt{El}\,\tm{\mtt{Int}} → \mtt{Set}
+				\end{array}
 			$$
 		\end{uncoverenv}
 		% where $u_i ≔ μ(e_i)$ for each $i ∈ \{1 \ldots n\}$.
 	\end{uncoverenv}
 \end{frame}
 
-\begin{frame}
+\begin{frame}[fragile]
 	\begin{uncoverenv}<+->%
-		Type declarations are translated thus:
+		Now, we can easily translate type declarations:
 		$$
 			\begin{array}{c}
-				\paren{\mtt{declare-type}\ t\ \paren{\plur e n}}
+				\tra{\paren{\mtt{declare-type}\ t\ \paren{\plur e n}}}
 				\\[2mm]
 				⇓
 				\\[2mm]
-				\mtt{symbol}\ {t} : \ki{e_1} → \ldots → \ki{e_n} → \mtt{Set};
+				\mtt{symbol}\ {\iden t} : \ty{\paren{\mtt{->}\ {\plur e n}\ \mtt{Type}}};
+				\\[2mm]
+				⇓
+				\\[2mm]
+				\mtt{symbol}\ {\iden t} : \ty{e_1} → \ldots → \ty{e_n} → \mtt{Set};
 			\end{array}
 		$$
 	\end{uncoverenv}
 	\\
 	\begin{uncoverenv}<+->%
 		\exxample
+		\begin{lstlisting}
+(declare-type Array (Type Type))\end{lstlisting}
+		\begin{lstlisting}
+symbol {|Array|} : Set → Set;\end{lstlisting}
 	\end{uncoverenv}
 \end{frame}
 
 
 \begin{frame}
 	\begin{uncoverenv}<+->
-		Translate \alert{types} to LambdaPi sets via
-		${\tra\cdot}_{\mbf{ty}} : \mbf{eo} → \mbf{lp}$;
+		Use $\tm{⋅} : \mbf{eo} → \mbf{lp}$ to translate \alert{terms/types}
+		to LambdaPi terms.
 		$$
 			\begin{array}{r@{\ =\ }l}
-				% \begin{dcases}
-				% 	\ \mtt{Set} & \text{if}\ $s = $,
-				% 	\\
-				% 	\ \ty{s}    & \text{otherwise}
-				% \end{dcases}
-
+				\tm{s}      &
+				\begin{dcases}
+					\ (\leadsto) & \text{if $s = \paren{\mtt{->}}$}, \\
+					\ \iden s    & \text{otherwise}
+				\end{dcases}
+				\\[6mm]
 				%
-				\ty{\paren{\mtt{->}\ {\plur e n}}} &
-				\ty{e_1} \leadsto \ldots \leadsto \ty{e_n}
+				\tm{e ∗ e'} & \tm{e} ⋅ \tm{e'}
 			\end{array}
 		$$
+	\end{uncoverenv}
+	\\
+	\begin{uncoverenv}<+->%
+		\exxample Consider translating the following type.
+		$$\begin{array}{r@{\ = \ }l}
+				\tm{\paren{\mtt{->}\ \mtt{Bool}\ \paren{\mtt{BitVec}\ \mtt{5}}}}
+				 &
+				\tm{\paren{\mtt{->} ∗ \mtt{Bool}} ∗ \paren{\mtt{BitVec} ∗ \mtt{5}}}
+				\\[2mm]
+				 &
+				\tm{\mtt{Bool}} \leadsto \tm{\mtt{BitVec} ∗ \mtt{5}}
+				\\[2mm]
+				 &
+				\iden{\mtt{Bool}} \leadsto \paren{\iden{\mtt{BitVec}} ⋅ \iden{\mtt{5}}}
+			\end{array}$$
+	\end{uncoverenv}
+\end{frame}
 
+\begin{frame}[fragile]
+	\begin{uncoverenv}<+->%
+		Now, we can translate \alert{constant declarations}, e.g.;
+		$$
+			\begin{array}{c}
+				\paren{\mtt{declare-const}\ s\ \paren{\mtt{->}\ \plur e n}\ \maybe{α}}
+				\\[2mm]
+				⇓
+				\\[2mm]
+				\mtt{constant symbol}\ {\iden s} : \mtt{El}\ \tm{\paren{\mtt{->}\ \plur e n}};
+				\\[2mm]
+				⇓
+				\\[2mm]
+				\mtt{constant symbol}\ {\iden s} : \mtt{El}\ \paren{\tm{e_1} \leadsto \ldots \leadsto \tm{e_n}};
+			\end{array}
+		$$
+	\end{uncoverenv}
+	\\
+	\begin{uncoverenv}<+->%
+		Also, \alert{update} the attribute map $γ$ with $\paren{s ↦ α}$.
+	\end{uncoverenv}
+	% 	\\
+	% 	\begin{uncoverenv}<+->%
+	% 		\exxample
+	% 		\begin{lstlisting}
+	% (declare-type Array (Type Type))\end{lstlisting}
+	% 		\begin{lstlisting}
+	% symbol {Array} : Set → Set;\end{lstlisting}
+	% 	\end{uncoverenv}
+\end{frame}
+
+\begin{frame}
+	\begin{uncoverenv}<+->
+		Translation of (implicit) parameters is easy.
+		$$
+			\begin{array}{r@{\ =\ }l}
+				\tra{\paren{s\ e}}_{\mbf{param}}
+				 & (\tm{s} : \ty{e})
+				\\[2mm]
+				\tra{\paren{s\ e\ \mtt{:implicit}}}_{\mbf{param}}
+				 & [\tm{s} : \ty{e}]
+			\end{array}
+		$$
+	\end{uncoverenv}
+\end{frame}
+
+\begin{frame}[fragile]
+	\begin{uncoverenv}<+->%
+		Translate \alert{parameterized constant declarations} thus:
+		$$
+			\begin{array}{c}
+				\paren{\mtt{declare-parameterized-const}\ s\ \paren{\plur ρ n}\ e}
+				\\[2mm]
+				⇓
+				\\[2mm]
+				\mtt{constant symbol}\ {\iden s}\ \tra{ρ_1}\ldots\tra{ρ_n}
+				: \mtt{El}\ \tm{e};
+			\end{array}
+		$$
+	\end{uncoverenv}
+	\\
+	\begin{uncoverenv}<+->%
+		\exxample Consider translating the following declaration.
+		\begin{lstlisting}
+(declare-parameterized-const =
+  ((A Type :implicit)) (-> A A Bool)
+  :chainable and
+)\end{lstlisting}
+		\begin{lstlisting}
+constant symbol {|=|} [A : Set] : El (A ~> A ~> Bool)\end{lstlisting}
+	\end{uncoverenv}
+\end{frame}
+
+% \begin{frame}
+% 	%
+% 	Translating parameters with \mtt{:list} produces an attribute map.
+% 	$$
+% 		\begin{array}{r@{\ }c@{\ }l}
+% 			\tra{\paren{s\ e\ \mtt{:list}}}^γ_{\mbf{param}}
+% 			 & {=} & \paren{(\tm{s} : \ty{e}),\ \paren{s ↦ \mtt{:list}}} \\
+% 		\end{array}
+% 	$$
+% \end{frame}
+
+\begin{frame}[fragile]
+	%
+	\alert{Definitions} are translated thus:
+	$$
+		\begin{array}{c}
+			\paren{\mtt{define}
+				\ s
+				\  \paren{\plur ρ n}
+				\ e
+				\ \maybe{\mtt{:type}\ e'}
+			}
+			\\[2mm]
+			⇓
+			\\[2mm]
+			\mtt{symbol}\ \iden{s}\ \tra{\plur ρ n}\ \maybe{{:}\ \tm{e'}}\ {{≔}\ \tm{e}};
+		\end{array}
+	$$
+\end{frame}
+
+\begin{frame}[fragile]
+	%
+	Programs are translated.\\[2mm]
+	\begin{uncoverenv}<+->%
+		\exxample Translation of \texttt{\$from\_clause}.
+		\begin{lstlisting}
+sequential symbol
+  {|$from_clause|} : (El Bool → El Bool);
+
+rule {|$from_clause|} (or $F1 $F2) |->
+  {|eo::ite|} [Bool]
+    ({|eo::is_eq|} [Bool] $F2 false)
+    $F1 (or $F1 $F2)
+
+with {|$from_clause|} $F1 |-> $F1;\end{lstlisting}
+	\end{uncoverenv}
+\end{frame}
+
+\begin{frame}[fragile]
+	%
+	Rule declarations are translated.\\[2mm]
+	\begin{uncoverenv}<+->%
+		\exxample Translation of \texttt{\$from\_clause}.
+		\begin{lstlisting}
+sequential symbol
+  cnf_implies_pos_aux : (El Bool → El Bool);
+
+rule cnf_implies_pos_aux (=> $F1 $F2)
+  |-> or (not (=> $F1 $F2))
+        (or (not $F1) (or $F2 false));
+
+constant symbol cnf_implies_pos : Π (x0 : El Bool),
+  El (Proof (cnf_implies_pos_aux x0));\end{lstlisting}
 	\end{uncoverenv}
 \end{frame}
 
 
-\begin{frame}
+\begin{frame}[fragile]
+	%
+	Proof scripts are translated:\\[2mm]
+	\begin{uncoverenv}<+->%
+		\exxample Translation of \texttt{\$from\_clause}.
+		\begin{lstlisting}[basicstyle=\ttfamily\tiny]
+constant symbol Z : Set;
+constant symbol input : El Bool;
+constant symbol reg : El Bool;
+constant symbol nf : El Z;
+constant symbol flash : El Z;
+constant symbol circuit : El Bool;
+symbol {|@t1|} : El Bool ≔ not input;
+symbol {|@t2|} : El Bool ≔ not reg;
+symbol {|@t3|} : El Bool ≔ and input (and {|@t2|} true);
+constant symbol {|@p1|} : El (Proof circuit);
+constant symbol {|@p2|} : El (Proof (= nf flash));
+constant symbol {|@p3|} : El (Proof (not (or {|@t3|} (or {|@t1|} (or reg false)))));
+symbol {|@p4|} : El (Proof (not {|@t3|})) ≔ not_or_elim [or {|@t3|} (or {|@t1|} (or reg false))] {|@p3|} {|eo::0|};
+symbol {|@p5|} : El (Proof {|@t2|}) ≔ not_or_elim [or {|@t3|} (or {|@t1|} (or reg false))] {|@p3|} ({|eo::succ|} ({|eo::succ|} {|eo::0|}));
+symbol {|@p6|} : El (Proof (not {|@t1|})) ≔ not_or_elim [or {|@t3|} (or {|@t1|} (or reg false))] {|@p3|} ({|eo::succ|} {|eo::0|});
+symbol {|@p7|} : El (Proof input) ≔ not_not_elim [input] {|@p6|};
+symbol {|@p8_aux|} : El (Proof (and input (and {|@t2|} true))) ≔ and_cons {|@p7|} (and_cons {|@p5|} trueI);
+symbol {|@p8|} : El (Proof {|@t3|}) ≔ and_intro [and input (and {|@t2|} true)] {|@p8_aux|};
+symbol {|@p9|} : El (Proof false) ≔ contra [{|@t3|}] {|@p8|} {|@p4|};\end{lstlisting}
+	\end{uncoverenv}
 \end{frame}
 
+\section{Results \& Future Work}
+
+
+\setbeamercolor*{structure}{fg=MaterialOrange400}
+\setbeamercolor*{background canvas}{bg=MaterialOrange400}
+\begin{frame}[standout]
+	\centering\Huge
+	\textbf{Results \& Future Work}
+\end{frame}
 
 \begin{frame}
+	%
+	Carve out the portion of CPC supporting \alert{QFUF}.
 	\begin{itemize}
-		\item<+-> Track \alert{attributes} of symbols during translation:
-		      % $$γ : 𝒮 → (\mbf{attr_c} ∪ \mbf{attr_v})$$
-
-		\item<+-> Terms are translated wrt.
-		      %
+		\item<+-> \alert{Rodin} SMT-LIB benchmark, 30 unsat problems.
+		\item<+-> Run \texttt{cvc5} with \texttt{--proof-format=cpc}, dump proofs.
+		\item<+-> Check which CPC rules were used, calculate dependencies.
+		\item<+-> Make some minor modifications, call this fork \alert{CPC-mini}.
 	\end{itemize}
 \end{frame}
 
 \begin{frame}
-	\begin{itemize}
-		\item<+-> Term translation function $\msf{tr}_γ : \mbf{eo} → \mbf{lp}$.
-
-	\end{itemize}
+	Translate CPC-mini to LambdaPi using \texttt{eo2lp}.
+	% \begin{itemize}
+	% 	\item<+-> total translation time: ${<}\ 10\text{ms}$.
+	% 	\item<+-> $N$ inference rules, $M$ programs.
+	% 	\item<+-> total typechecking time: ${<}\ 5\text{ms}$.
+	% \end{itemize}
 \end{frame}
 
+\begin{frame}
+	Translate all of our Rodin proofs.
+	% \begin{itemize}
+	% 	\item<+-> max translation time: ${<}\ 10\text{ms}$.
+	% 	\item<+-> max number proof steps: $70$
+	% 	\item<+-> max checking time: ${<}\ 5\text{ms}$.
+	% \end{itemize}
+\end{frame}
 
-\section{Results}
-
-\subsection{Translating CPC}
-
-\subsection{Translating Rodin}
-
-
+\begin{frame}
+	Lots of potential for \alert{future work}:
+	\begin{itemize}
+		\item[\emoji{globe-showing-europe-africa}]<+-> Support full CPC: arithmetic, strings, bit-vectors, etc.
+		\item[\emoji{chart-increasing}]<+-> Scale up to bigger proofs.
+		\item[\emoji{broom}]<+-> Tidy translation: perform elaboration in LambdaPi?
+		\item[\emoji{flag-brazil}]<+-> Do all of this in Brazil, Nov 2025?
+	\end{itemize}
+\end{frame}
 
 
 
