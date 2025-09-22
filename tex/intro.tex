@@ -1,0 +1,34 @@
+\documentclass[class=llncs, crop=false]{standalone}
+\input{preamble.tex}
+\input{macros.tex}
+
+\begin{document}
+%
+The area of automated reasoning known as \emph{satisfiability modulo theories}
+(SMT) is aimed primarily at developing tools for deciding the (un)satisfiability
+of logical specifications from various mathematical theories~\cite{Barrett2021}.
+%
+When a specification is deemed to be unsatisfiable, many solvers are capable
+of demonstrating this fact through the generation proof certificates.
+%
+Many proof formats exist (e.g., Alethe, LFSC), but the inference rules used
+in their proofs are not specified in any formal language.
+%
+This can make the development of proof checkers challenging, as developers
+must rewrite parts of their checker for every change made to the proof system.
+
+\textit{Eunoia} is a logical framework that allows formalizing the inference
+rules used by the proof production facilities of an SMT solver.
+%
+\textit{Ethos} is a C++ tool for verifying proofs in the Eunoia format.
+
+% eunoia is similar/inspired by the speculative proposal for SMT-LIB 3.
+SMT-LIB is a specification language used for interacting with SMT solvers.
+The syntax and semantics of SMT-LIB are standardized by the
+SMT-LIB Initiative~\autocite{Barrett2015-standard}).
+%
+Generally speaking, SMT-LIB scripts specify satisfiability problems for
+many-sorted first-order logic (MFOL) and provide instructions for solvers
+to interact with these specifications.
+%
+\end{document}

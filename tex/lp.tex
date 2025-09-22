@@ -1,0 +1,60 @@
+\documentclass[class=llncs, crop=false]{standalone}
+\input{preamble.tex}
+\input{macros.tex}
+
+\begin{document}
+
+\subsection{Terms, Judgements, and Inferences}
+
+\begin{boxfigure}[t!]{fig:lpTermSyntax}
+	{Abstract syntax for $\lp$-terms.}
+	%
+	$$\lpTermSyntax$$
+	%
+\end{boxfigure}
+%
+\Autoref{fig:lpTermSyntax}, \autoref{fig:lpCtxSyntax}
+and \autoref{fig:lpTypingRules} provide abstract syntax
+for the $\lp$-calculus.
+%
+In particular, the rules in \autoref{fig:lpTermSyntax}
+define the \emph{terms} of the $\lp$-calculus.
+%
+Each term is either a \emph{variable} $x$,
+a \emph{universe} from the set $\{ \TYPE, \KIND \}$,
+an \emph{application} of two terms $\prn{\app{t}{t'}}$,
+or an \emph{abstraction}
+$\prn{\binddot{\mscr{B}}{x : t}{t'}}$,
+where $\mscr{B}$ is a \emph{binder} from the set $\{ λ, Π \}$.
+% TODO. define/declare α-conversion and β-reduction.
+
+% --------------------------------------------------------%
+\begin{boxfigure}[t!]{fig:lpCtxSyntax}
+	{Abstract syntax for $\lp$-contexts.}
+	%
+	$$\lpCtxSyntax$$
+	%
+\end{boxfigure}
+%
+The rules in \autoref{fig:lpCtxSyntax} define a
+\emph{context element} $γ$ as either a \emph{typing}
+$\prn{x : t}$, or a \emph{rewrite rule} $\prn{t ↪ t'}$.
+%
+Furthermore, a \emph{context} is defined as a list $Γ$ of
+context elements.
+
+% -------------------------------------------------------- %
+\begin{boxfigure}[t!]{fig:lpTypingRules}
+	{Typing rules for the $\lp$-calculus.}
+	%
+	% $$\lpCtxSyntax$$
+	%
+\end{boxfigure}
+%
+Finally, \autoref{fig:lpTypingRules} defines a
+\emph{typing relation} between contexts and terms,
+where $\prn{Γ ⊢ t : t'}$ is read as ``$t$ has type $t'$''.
+
+A \emph{signature} is some LambdaPi code that determines a
+context in the $\lp$-calculus.
+\end{document}
