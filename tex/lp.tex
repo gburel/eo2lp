@@ -13,7 +13,8 @@
 	%
 \end{boxfigure}
 %
-\Autoref{fig:lpTermSyntax}, \autoref{fig:lpCtxSyntax}
+\Autoref{fig:lpTermSyntax}
+% , \autoref{fig:lpCtxSyntax}
 and \autoref{fig:lpTypingRules} provide abstract syntax
 for the $\lp$-calculus.
 %
@@ -21,27 +22,53 @@ In particular, the rules in \autoref{fig:lpTermSyntax}
 define the \emph{terms} of the $\lp$-calculus.
 %
 Each term is either a \emph{variable} $x$,
-a \emph{universe} from the set $\{ \TYPE, \KIND \}$,
+a \emph{constant} $κ$,
+a \emph{universe} from $\{ \TYPE, \KIND \}$,
 an \emph{application} of two terms $\prn{\app{t}{t'}}$,
 or an \emph{abstraction}
-$\prn{\binddot{\mscr{B}}{x : t}{t'}}$,
-where $\mscr{B}$ is a \emph{binder} from the set $\{ λ, Π \}$.
+$\prn{\binddot{\mscr{B}}{x : t}{t'}}$
+where $\mscr{B}$ is a \emph{binder} from $\{ λ, Π \}$.
 % TODO. define/declare α-conversion and β-reduction.
 
 % --------------------------------------------------------%
-\begin{boxfigure}[t!]{fig:lpCtxSyntax}
-	{Abstract syntax for $\lp$-contexts.}
-	%
-	$$\lpCtxSyntax$$
-	%
-\end{boxfigure}
+% \begin{boxfigure}[t!]{fig:lpCtxSyntax}
+% 	{Abstract syntax for $\lp$-contexts.}
+% 	%
+% 	$$\lpCtxSyntax$$
+% 	%
+% \end{boxfigure}
 %
-The rules in \autoref{fig:lpCtxSyntax} define a
-\emph{context element} $γ$ as either a \emph{typing}
-$\prn{x : t}$, or a \emph{rewrite rule} $\prn{t ↪ t'}$.
+A \emph{typing} is an expression of the form $\prn{t : t'}$
+for some terms $t$, $t'$, and a \emph{context} is a set of
+typings of the form $\prn{x : t}$ for some variable $x$ and
+term $t$.
 %
-Furthermore, a \emph{context} is defined as a list $Γ$ of
-context elements.
+Hereinafter, given a context $Γ$ and a typing $\prn{x : t}$,
+let $\prn{Γ, \prn{x : t}}$ denote the extension $Γ ∪ \{x : t\}$.
+%
+A \emph{rewrite rule} is an expression of the form
+$\prn{t ↪ t'}$, where $t$ has the form
+$\prn{\app{\prn{\app{κ}{t_1}} ⋅ \ldots}{t_n}}$
+for some terms $\plur t n$.
+
+
+A \emph{signature} is a set whose elements are either
+typings or rewrite rules.
+%
+Given a signature $Σ$, the rules in
+\autoref{fig:lpTypingRules} provide a (mutually inductive)
+definition of a \emph{well-formedness} relation
+$\prn{\msf{wf}}$ on contexts and a \emph{typing relation}
+$\prn{⊢_{Σ}}$ between contexts and typings,
+where $\prn{Γ ⊢_{Σ} t : t'}$ may be read as
+``$Γ$ proves $t$ has type $t'$ with respect to $Σ$''.
+
+% The rules in \autoref{fig:lpCtxSyntax} define
+% a \emph{context element} $γ$ as either a \emph{typing}
+% $\prn{x : t}$, or a \emph{rewrite rule} .
+% %
+% Furthermore, a \emph{context} is defined as a list $Γ$ of
+% context elements.
 
 % -------------------------------------------------------- %
 \begin{boxfigure}[t!]{fig:lpTypingRules}
@@ -54,10 +81,6 @@ context elements.
 	$$ \convRule $$
 	$$ \wfRuleEmp \qquad \wfRuleVar$$
 \end{boxfigure}
-%
-Finally, \autoref{fig:lpTypingRules} defines a
-\emph{typing relation} between contexts and terms,
-where $\prn{Γ ⊢ t : t'}$ is read as ``$t$ has type $t'$''.
 
 
 A \emph{signature} is some LambdaPi code that determines a
