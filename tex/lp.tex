@@ -47,13 +47,18 @@ context elements.
 \begin{boxfigure}[t!]{fig:lpTypingRules}
 	{Typing rules for the $\lp$-calculus.}
 	%
-	% $$\lpCtxSyntax$$
-	%
+	$$ \typeRule \qquad \varRule $$
+	$$ \prodRule $$
+	$$ \absRule  $$
+	$$ \appRule  $$
+	$$ \convRule $$
+	$$ \wfRuleEmp \qquad \wfRuleVar$$
 \end{boxfigure}
 %
 Finally, \autoref{fig:lpTypingRules} defines a
 \emph{typing relation} between contexts and terms,
 where $\prn{Γ ⊢ t : t'}$ is read as ``$t$ has type $t'$''.
+
 
 A \emph{signature} is some LambdaPi code that determines a
 context in the $\lp$-calculus.

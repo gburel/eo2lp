@@ -184,3 +184,204 @@
 		% ------------------------------------- %
 	\end{array}
 }
+
+\newcommand{\judge}[3]{{#1} ⊢ {#2} : {#3}}
+\newcommand{\wf}[1]{\msf{wf}(#1)}
+% typing rules
+\newcommand{\typeRule}{
+	\begin{prooftree}
+		\hypo{ \wf Γ }
+		\infer1{ \judge Γ \TYPE \KIND }
+	\end{prooftree}
+}
+
+\newcommand{\varRule}{
+	\begin{prooftree}
+		\hypo{\wf Γ}
+		\hypo{\prn{x : t} ∈ \lvertΓ\rvert }
+		\infer2{ \judge Γ x t }
+	\end{prooftree}
+}
+
+\newcommand{\prodRule}{
+	\begin{prooftree}
+		\hypo{\judge Γ t u}
+		\hypo{\judge{Γ, \prn{x : t}}{t'}{u'}}
+		\infer2{\judge Γ {\prn{\pii {x : t} {t'}}} {u'} }
+	\end{prooftree}
+}
+
+\newcommand{\absRule}{
+	\begin{prooftree}
+		\hypo{\judge{Γ, \prn{x : t}} e {t'}}
+		\hypo{\judge Γ {\prn{\pii {x : t} {t'}}} u}
+		\infer2{\judge Γ
+		{\prn{\lam {x : t} {e}}}
+		{\prn{\pii {x : t} {t'}}}
+		}
+	\end{prooftree}
+}
+
+\newcommand{\appRule}{
+	\begin{prooftree}
+		\hypo{\judge Γ e {\prn{\pii{x : t}{t'}}}}
+		\hypo{\judge Γ {e'} t}
+		\infer2{\judge Γ {\prn{\app{e}{e'}}} {t'[x ↦ {e'}]}}
+	\end{prooftree}
+}
+
+\newcommand{\convRule}{
+	\begin{prooftree}
+		\hypo{\judge Γ e t}
+		\hypo{\judge Γ {t'} {u}}
+		\hypo{t ≡ t'}
+		\infer3{\judge Γ {e} {t'}}
+	\end{prooftree}
+}
+
+\newcommand{\wfRuleEmp}{
+	\begin{prooftree}
+		\infer0{ \wf{\msf{nil}} }
+	\end{prooftree}
+}
+
+\newcommand{\wfRuleVar}{
+	\begin{prooftree}
+		\hypo{ Γ ⊢ \prn{t : u} }
+		\infer1{ \wf{Γ, \prn{x : t} }}
+	\end{prooftree}
+}
+
+% \newcommand{\wfRuleDef}{
+% 	\begin{prooftree}
+% 		\hypo{ Γ ⊢ e : t }
+% 		\hypo{ x ∉ \domain{\tilde{Γ}} }
+% 		\infer2{ \wf{Γ ∪ \{ (x ≡ e) : t \}} }
+% 	\end{prooftree}
+% }
+
+% \newcommand{\varRule}{
+% 	\begin{prooftree}
+% 		\hypo{ \wf{Γ} }
+% 		\hypo{ \tilde{Γ}(x,t) }
+% 		\infer2{ Γ ⊢ x : t }
+% 	\end{prooftree}
+% }
+
+% \newcommand{\dRule}{
+% 	\begin{prooftree}
+% 		\hypo{ \wf{Γ} }
+% 		\hypo{ ((x ≡ e) : t) ∈ Γ }
+% 		\infer2{ Γ ⊢ (x ≡ e) : t }
+% 	\end{prooftree}
+% }
+
+
+% \newcommand{\appEqRule}{
+% 	\begin{prooftree}
+% 		\hypo{Γ ⊢ (e₁ ≡ e₂) : (\pii {x : t₁} {t₂})}
+% 		\hypo{Γ ⊢ (e₃ ≡ e₄) : t₁}
+% 		\infer2{Γ ⊢ ((\app {e₁} {e₃}) ≡ (\app {e₂} {e₄})) : {t₁}[x ≔ {e₃}]}
+% 	\end{prooftree}
+% }
+
+
+
+% \newcommand{\absEqRule}{
+% 	\begin{prooftree}
+% 		\hypo{Γ ⊢ (t₁ ≡ t₂) : u₁}
+% 		\hypo{Γ ∪ \{ x : t₁ \} ⊢ (e₁ ≡ e₂) : t₃}
+% 		\hypo{Γ ⊢ (\pii{x : t₁}{t₂}) : u₂}
+% 		\infer3{Γ ⊢ ((\lam {x : t₁}{e₁}) ≡ (\lam {x : t₂}{e₂}))
+% 			: (\pii {x : t₁}{t₂}) }
+% 	\end{prooftree}
+% }
+
+
+
+% \newcommand{\piEqRule}{
+% 	\begin{prooftree}
+% 		\hypo{Γ ⊢ (t₁ ≡ t₂) : u₁}
+% 		\hypo{Γ ∪ \{x : t₁\} ⊢ (t₃ ≡ t₄) : u₂ }
+% 		\infer2{ Γ ⊢ ((\pii {x : t₁} {t₃}) ≡ (\pii {x : t₂} {t₄})) : u₂ }
+% 	\end{prooftree}
+% }
+
+
+% \newcommand{\letRule}{
+% 	\begin{prooftree}
+% 		\hypo{Γ ∪ \{x ≡ e₁ : t₁\} ⊢ e₂ : t₂}
+% 		\infer1{ Γ ⊢ (\lett{x ≡ e₁}{e₂}) : t₂[x ≔ e₁]}
+% 	\end{prooftree}
+% }
+
+% \newcommand{\letEqRule}{
+% 	\begin{prooftree}
+% 		\hypo{Γ ⊢ (e₁ ≡ e₂) : t₁}
+% 		\hypo{Γ ∪ \{ x ≡ e₁ \} ⊢ e₃ ≡ e₄ : t₂}
+% 		\infer2{ Γ ⊢ ((\lett{x ≡ e₁}{e₃}) ≡ (\lett{x ≡ e₂}{e₄})) : t₂[x ≔ e₁] }
+% 	\end{prooftree}
+% }
+
+% \newcommand{\letReduceRule}{
+% 	\begin{prooftree}
+% 		\hypo{Γ ⊢ e₁ : t₁}
+% 		\hypo{Γ ∪ \{x ≡ e₁ : t₁\} ⊢ e₂ : t₂}
+% 		\infer2{ Γ ⊢ ((\lett{x ≡ e₁}{e₂}) ≡ e₂[x ≔ e₁]) : t₂[x ≔ e₁]}
+% 	\end{prooftree}
+% }
+
+
+% % \newcommand{\varRule}{
+% %     \begin{prooftree}
+% %         \hypo{Γ ⊢ t : u}
+% %         \infer1{Γ \fcmp [x : t] ⊢ x : t}
+% %     \end{prooftree}
+% % }
+
+
+% \newcommand{\betaRule}{
+% 	\begin{prooftree}
+% 		\hypo{Γ ⊢ (\lam {x : t₁} {e}) : (\pii {x : t₁} {t₂})}
+% 		\hypo{Γ ⊢ e' : t₁ }
+% 		\infer2{Γ ⊢ (\app{(\lam {x : t₁} {e})}{e'} ≡ e[x≔e']) : t₂[x≔e']}
+% 	\end{prooftree}
+% }
+
+% \newcommand{\reflRule}{
+% 	\begin{prooftree}
+% 		\hypo{Γ ⊢ e : t}
+% 		\infer1{Γ ⊢ (e ≡ e) : t}
+% 	\end{prooftree}
+% }
+
+% \newcommand{\symRule}{
+% 	\begin{prooftree}
+% 		\hypo{Γ ⊢ (e₁ ≡ e₂) : t}
+% 		\infer1{Γ ⊢ (e₂ ≡ e₁) : t}
+% 	\end{prooftree}
+% }
+
+% \newcommand{\transRule}{
+% 	\begin{prooftree}
+% 		\hypo{Γ ⊢ (e₁ ≡ e₂) : t}
+% 		\hypo{Γ ⊢ (e₂ ≡ e₃) : t}
+% 		\infer2{Γ ⊢ (e₁ ≡ e₃) : t}
+% 	\end{prooftree}
+% }
+
+% \newcommand{\convRule}{
+% 	\begin{prooftree}
+% 		\hypo{Γ ⊢ e : t₁}
+% 		\hypo{Γ ⊢ (t₁ ≡ t₂) : u}
+% 		\infer2{Γ ⊢ e : t₂}
+% 	\end{prooftree}
+% }
+
+% \newcommand{\convEqRule}{
+% 	\begin{prooftree}
+% 		\hypo{Γ ⊢ (e₁ ≡ e₂) : t₁}
+% 		\hypo{Γ ⊢ (t₁ ≡ t₂) : u}
+% 		\infer2{Γ ⊢ (e₁ ≡ e₂) : t₂}
+% 	\end{prooftree}
+% }
