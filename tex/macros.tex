@@ -185,7 +185,7 @@
 	\end{array}
 }
 
-\newcommand{\judge}[3]{{#1} ⊢ {#2} : {#3}}
+\newcommand{\judge}[3]{{#1} ⊢_{Σ} {#2} : {#3}}
 \newcommand{\wf}[1]{\msf{wf}(#1)}
 % typing rules
 \newcommand{\typeRule}{
@@ -234,7 +234,7 @@
 	\begin{prooftree}
 		\hypo{\judge Γ e t}
 		\hypo{\judge Γ {t'} {u}}
-		\hypo{t ≡ t'}
+		\hypo{t ≡_{Σ} t'}
 		\infer3{\judge Γ {e} {t'}}
 	\end{prooftree}
 }
