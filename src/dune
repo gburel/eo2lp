@@ -16,6 +16,5 @@
    translation encoding
   )
  (flags :standard -w -8)
- (libraries ppx_deriving str ocamlgraph)
- (preprocess (pps ppx_deriving.show))
+ (libraries str)
 )

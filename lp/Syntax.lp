@@ -2,6 +2,7 @@ require open Logic.U.Arrow;
 
 symbol 𝒮 : TYPE;
 builtin "String" ≔ 𝒮;
+symbol string : Set;
 
 symbol List : TYPE;
 injective symbol list : Set → Set;
@@ -15,13 +16,32 @@ with (map $f ($x ⨾ $xs)) ↪ ($f $x) ⨾ (map $f $xs);
 
 // type of eo terms
 symbol eo : Set;
+injective symbol sym : El (string ⤳ eo);
+injective symbol app : El (string ⤳ list eo ⤳ eo);
+
+
+type (app "and" (cons "true" (cons "true" nil)));
+
+symbol eo' : Set;
+injective symbol sym' : El (string ⤳ eo');
+injective symbol app' : El (eo' ⤳ eo' ⤳ eo');
+
+symbol elaborate : El (eo ⤳ eo');
+
+symbol ctyp : El (string) → Set;
+symbol ctm  (s : El string) : El (ctyp s);
+
+symbol interp : El (eo' ⤳ eo' ⤳ ....)
+
+
+
+
 symbol Halt : El eo;
 
 symbol EO : TYPE ≔ El eo;
 
 // every symbol annotated with a type
 injective symbol !! : 𝒮 → EO → EO;
-injective symbol app : El (eo ⤳ list eo ⤳ eo);
 injective symbol --> : El (list eo ⤳ eo);
 injective symbol Type : El eo;
 
