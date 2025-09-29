@@ -58,21 +58,26 @@ for some terms $\plur t n$.
 
 A \emph{signature} is a set whose elements are either
 typings or rewrite rules, where each typing
-is of the form $\prn{κ : t}$ for some constant $κ$ and term $t$.
+is of the form $\prn{κ : t}$ for some constant $κ$ and
+term $t$.
 %
-Given some signature $Σ$, let $R_{Σ}$ be the
-smallest binary relation such that:
+Given some signature $Σ$, let $R_{Σ}$ be the smallest
+binary relation such that:
+%
 \begin{enumerate}
 	\item $\prn{ℓ ↪ r} ∈ Σ$ implies $(ℓ, r) ∈ R^⋆$, and
-	\item $R^⋆$ is closed under application, abstraction, and substitution.
+	\item $R^⋆$ is closed under application, abstraction,
+	      and substitution.
 \end{enumerate}
+%
 %, abstraction and substitution.  $R$
 Then, \emph{equality modulo rewriting} $\prn{{≡_{Σ}}}$ is
 defined as the least equivalence relation containing
 $R_Σ$ and the $β$-reduction relation.
 Furthermore, the rules in \autoref{fig:lpTypingRules}
-provide a (mutually inductive) definition of a \emph{well-formedness} relation
-$\prn{\msf{wf}}$ on contexts and a \emph{typing relation}
+provide a (mutually inductive) definition of a
+\emph{well-formedness} relation $\prn{\msf{wf}}$ on
+contexts and a \emph{typing relation}
 $\prn{⊢_{Σ}}$ between contexts and typings,
 where $\prn{Γ ⊢_{Σ} e : t}$ may be read as
 ``$Γ$ proves $e$ has type $t$ with respect to $Σ$''.
@@ -88,15 +93,61 @@ where $\prn{Γ ⊢_{Σ} e : t}$ may be read as
 \begin{boxfigure}[t!]{fig:lpTypingRules}
 	{Typing rules for the $\lp$-calculus.}
 	%
-	$$ \typeRule \qquad \varRule $$
-	$$ \prodRule $$
-	$$ \absRule  $$
-	$$ \appRule  $$
-	$$ \convRule $$
-	$$ \wfRuleEmp \qquad \wfRuleVar$$
+
+	$$ \mcomment{($\textsc{typ}$)}\ {⦂}\ \ \typeRule $$
+	$$ \mcomment{($\textsc{con}$)}\ {⦂}\ \ \constRule $$
+	$$ \mcomment{($\textsc{var}$)}\ {⦂}\ \ \varRule $$
+	$$ \mcomment{($\textsc{prod}$)}\ {⦂}\ \ \prodRule $$
+	$$ \mcomment{($\textsc{fun}$)}\ {⦂}\ \ \absRule  $$
+	$$ \mcomment{($\textsc{app}$)}\ {⦂}\ \ \appRule $$
+	$$ \mcomment{($\textsc{conv}$)}
+		\ {⦂}
+		\ \ \convRule $$
+	\hrule
+	$$ \mcomment{($\textsc{wf}_0$)}\ {⦂}\ \ \wfRuleEmp
+		\qquad
+		\mcomment{($\textsc{wf}_{+}$)}\ {⦂}\ \ \wfRuleVar $$
 \end{boxfigure}
 
 
-A \emph{signature} is some LambdaPi code that determines a
-context in the $\lp$-calculus.
+\begin{boxfigure}[t!]{fig:lpSyntax}
+	{Concrete syntax for \textsc{LambdaPi} signatures.}
+	%
+	$$
+		\begin{array}[t]{l@{\ }c@{\ }l}
+			% Σ & {⦂} & \any{c}
+			% \\[1mm]
+			c & {⦂} &
+			\maybe{m}\, \mtt{symbol}\ s
+			\ \any{ρ}
+			\,{: t}
+			\ \maybe{≔ t'};
+			\\
+			  & {∣} &
+			\mtt{rule}\ r\
+			\any{\mtt{with}\ r'};
+			\\
+			  & {∣} &
+			\mtt{require}\ \maybe{\mtt{open}}\,{μ};
+			\\[1mm]
+			r & {⦂} &
+			\prn{ {κ\,\any{t}} ↪ {\,t'}}
+		\end{array}
+		\qquad
+		\begin{array}[t]{l@{\ }c@{\ }l}
+			m & {⦂} & \mtt{constant}
+			\\
+			  & {∣} & \mtt{sequential}
+			\\
+			  & {∣} & \mtt{injective}
+			\\[1mm]
+			ρ & {⦂} & (x : t) ∣ [\,x : t\,]
+		\end{array}
+	$$
+
+
+
+\end{boxfigure}
+
+
 \end{document}

@@ -186,20 +186,29 @@
 }
 
 \newcommand{\judge}[3]{{#1} ⊢_{Σ} {#2} : {#3}}
-\newcommand{\wf}[1]{\msf{wf}(#1)}
+\newcommand{\wf}[1]{\msf{wf}\,{#1}}
 % typing rules
 \newcommand{\typeRule}{
 	\begin{prooftree}
-		\hypo{ \wf Γ }
+		\hypo{\wf Γ}
 		\infer1{ \judge Γ \TYPE \KIND }
 	\end{prooftree}
 }
 
 \newcommand{\varRule}{
 	\begin{prooftree}
-		\hypo{\wf Γ}
-		\hypo{\prn{x : t} ∈ \lvertΓ\rvert }
+		\hypo{ \wf Γ}
+		\hypo{ \prn{x : t} ∈ Γ  }
 		\infer2{ \judge Γ x t }
+	\end{prooftree}
+}
+
+\newcommand{\constRule}{
+	\begin{prooftree}
+		\hypo{\wf Γ}
+		\hypo{\prn{κ : t} ∈ Σ}
+		\hypo{\judge Γ t u}
+		\infer3{ \judge Γ κ t }
 	\end{prooftree}
 }
 
@@ -241,14 +250,14 @@
 
 \newcommand{\wfRuleEmp}{
 	\begin{prooftree}
-		\infer0{ \wf{\msf{nil}} }
+		\infer0{ \wf{\msf{∅}} }
 	\end{prooftree}
 }
 
 \newcommand{\wfRuleVar}{
 	\begin{prooftree}
-		\hypo{ Γ ⊢ \prn{t : u} }
-		\infer1{ \wf{Γ, \prn{x : t} }}
+		\hypo{ \judge Γ t u }
+		\infer1{ \wf{(Γ, \prn{x : t})}}
 	\end{prooftree}
 }
 
