@@ -4,8 +4,6 @@
 
 \begin{document}
 
-\subsection{Terms, Judgements, and Inferences}
-
 \begin{boxfigure}[t!]{fig:lpTermSyntax}
 	{Abstract syntax for $\lp$-terms.}
 	%
@@ -54,8 +52,15 @@ $\prn{ℓ ↪ r}$, where $ℓ$ and $r$ are terms such that
 $ℓ$ has the form
 $\prn{\app{\prn{\app{κ}{t_1}} ⋅ \ldots}{t_n}}$
 for some terms $\plur t n$.
+% -------------------------------------------------------- %
+\begin{boxfigure}[t!]{fig:lpTypingRules}
+	{Typing rules for the $\lp$-calculus.}
+	%
+	$$ \lpTypingRules $$
+	\hrule
+	$$ \lpWfRules $$
+\end{boxfigure}
 % ----
-
 A \emph{signature} is a set whose elements are either
 typings or rewrite rules, where each typing
 is of the form $\prn{κ : t}$ for some constant $κ$ and
@@ -65,8 +70,8 @@ Given some signature $Σ$, let $R_{Σ}$ be the smallest
 binary relation such that:
 %
 \begin{enumerate}
-	\item $\prn{ℓ ↪ r} ∈ Σ$ implies $(ℓ, r) ∈ R^⋆$, and
-	\item $R^⋆$ is closed under application, abstraction,
+	\item $\prn{ℓ ↪ r} ∈ Σ$ implies $(ℓ, r) ∈ R_{Σ}$, and
+	\item $R_{Σ}$ is closed under application, abstraction,
 	      and substitution.
 \end{enumerate}
 %
@@ -89,65 +94,50 @@ where $\prn{Γ ⊢_{Σ} e : t}$ may be read as
 % Furthermore, a \emph{context} is defined as a list $Γ$ of
 % context elements.
 
+
+
 % -------------------------------------------------------- %
-\begin{boxfigure}[t!]{fig:lpTypingRules}
-	{Typing rules for the $\lp$-calculus.}
-	%
-
-	$$ \mcomment{($\textsc{typ}$)}\ {⦂}\ \ \typeRule $$
-	$$ \mcomment{($\textsc{con}$)}\ {⦂}\ \ \constRule $$
-	$$ \mcomment{($\textsc{var}$)}\ {⦂}\ \ \varRule $$
-	$$ \mcomment{($\textsc{prod}$)}\ {⦂}\ \ \prodRule $$
-	$$ \mcomment{($\textsc{fun}$)}\ {⦂}\ \ \absRule  $$
-	$$ \mcomment{($\textsc{app}$)}\ {⦂}\ \ \appRule $$
-	$$ \mcomment{($\textsc{conv}$)}
-		\ {⦂}
-		\ \ \convRule $$
-	\hrule
-	$$ \mcomment{($\textsc{wf}_0$)}\ {⦂}\ \ \wfRuleEmp
-		\qquad
-		\mcomment{($\textsc{wf}_{+}$)}\ {⦂}\ \ \wfRuleVar $$
-\end{boxfigure}
-
-
+\subsection{The \textsc{LambdaPi} Proof Assistant}
+%
 \begin{boxfigure}[t!]{fig:lpSyntax}
 	{Concrete syntax for \textsc{LambdaPi} signatures.}
 	%
-	$$
-		\begin{array}[t]{l@{\ }c@{\ }l}
-			% Σ & {⦂} & \any{c}
-			% \\[1mm]
-			c & {⦂} &
-			\maybe{m}\, \mtt{symbol}\ s
-			\ \any{ρ}
-			\,{: t}
-			\ \maybe{≔ t'};
-			\\
-			  & {∣} &
-			\mtt{rule}\ r\
-			\any{\mtt{with}\ r'};
-			\\
-			  & {∣} &
-			\mtt{require}\ \maybe{\mtt{open}}\,{μ};
-			\\[1mm]
-			r & {⦂} &
-			\prn{ {κ\,\any{t}} ↪ {\,t'}}
-		\end{array}
-		\qquad
-		\begin{array}[t]{l@{\ }c@{\ }l}
-			m & {⦂} & \mtt{constant}
-			\\
-			  & {∣} & \mtt{sequential}
-			\\
-			  & {∣} & \mtt{injective}
-			\\[1mm]
-			ρ & {⦂} & (x : t) ∣ [\,x : t\,]
-		\end{array}
-	$$
-
-
-
+	$$ \lpConcreteSyntax $$
 \end{boxfigure}
+%
+Concrete syntax for a fragment of the $\lambdapi$ proof
+assistant is given in \autoref{fig:lpSyntax}.
+%
+A $\lambdapi$ \emph{file} is a list of \emph{commands},
+where each command is either a \emph{symbol declaration}
+(\mtt{symbol}), \emph{rewrite rule declaration} (\mtt{rule}),
+or an \emph{import} (\mtt{require}).
+%
+Each $\lambdapi$ file can be seen a representation of a
+signature in the $\lp$-calculus thus:
+%
+\begin{enumerate}
+	\item The most primitive form of symbol declaration is
+	      $\prn{\mtt{symbol}\ s : t;}$, which has the effect
+	      of adding $\prn{s : t}$ to the signature.
+
+	\item A rewrite rule $\prn{l ↪ r}$ may be introduced by
+	      $\prn{\mtt{rule}\ ℓ ↪ r;}$.
+	      For user convenience, a list of rewrite rules
+	      may be introduced using the \mtt{with}-syntax.
+
+	\item Given an \emph{environment} $Θ$,
+	      the contents of files named by $\plur μ n$
+	      may be imported using the $\mtt{require}$ command.
+	      %
+	      By default, imported symbols are qualified by
+	      the name of the file they were defined by.
+	      That is, if $μ$ declares the symbol $s$
+	      and $μ'$ imports $μ$, then the name of $s$ in $μ'$
+	      is $\prn{μ.s}$.
+
+
+\end{enumerate}
 
 
 \end{document}
