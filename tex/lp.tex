@@ -5,16 +5,17 @@
 \begin{document}
 
 \begin{boxfigure}[t!]{fig:lpTermSyntax}
-	{Abstract syntax for $\lp$-terms.}
+	{Syntax and typing rules for the $\lp$-calculus.}
+	%
 	%
 	$$\lpTermSyntax$$
+	\hrule
+	$$\lpTypingRules$$
 	%
 \end{boxfigure}
 %
-\Autoref{fig:lpTermSyntax}
-% , \autoref{fig:lpCtxSyntax}
-and \autoref{fig:lpTypingRules} provide abstract syntax
-for the $\lp$-calculus.
+\Autoref{fig:lpTermSyntax} provides abstract syntax
+for the \emph{$\lp$-calculus modulo rewriting}.
 %
 In particular, the rules in \autoref{fig:lpTermSyntax}
 define the \emph{terms} of the $\lp$-calculus.
@@ -53,13 +54,13 @@ $ℓ$ has the form
 $\prn{\app{\prn{\app{κ}{t_1}} ⋅ \ldots}{t_n}}$
 for some terms $\plur t n$.
 % -------------------------------------------------------- %
-\begin{boxfigure}[t!]{fig:lpTypingRules}
-	{Typing rules for the $\lp$-calculus.}
-	%
-	$$ \lpTypingRules $$
-	\hrule
-	$$ \lpWfRules $$
-\end{boxfigure}
+% \begin{boxfigure}[t!]{fig:lpTypingRules}
+% 	{Typing rules for the $\lp$-calculus.}
+% 	%
+% 	$$ \lpTypingRules $$
+% 	\hrule
+% 	$$ \lpWfRules $$
+% \end{boxfigure}
 % ----
 A \emph{signature} is a set whose elements are either
 typings or rewrite rules, where each typing
@@ -79,7 +80,7 @@ binary relation such that:
 Then, \emph{equality modulo rewriting} $\prn{{≡_{Σ}}}$ is
 defined as the least equivalence relation containing
 $R_Σ$ and the $β$-reduction relation.
-Furthermore, the rules in \autoref{fig:lpTypingRules}
+Furthermore, the rules in \autoref{fig:lpTermSyntax}
 provide a (mutually inductive) definition of a
 \emph{well-formedness} relation $\prn{\msf{wf}}$ on
 contexts and a \emph{typing relation}
@@ -102,6 +103,8 @@ where $\prn{Γ ⊢_{Σ} e : t}$ may be read as
 \begin{boxfigure}[t!]{fig:lpSyntax}
 	{Concrete syntax for \textsc{LambdaPi} signatures.}
 	%
+	$$ \lpTermsConcrete $$
+	\hrule
 	$$ \lpConcreteSyntax $$
 \end{boxfigure}
 %
@@ -109,19 +112,21 @@ Concrete syntax for a fragment of the $\lambdapi$ proof
 assistant is given in \autoref{fig:lpSyntax}.
 %
 A $\lambdapi$ \emph{file} is a list of \emph{commands},
-where each command is either a \emph{symbol declaration}
+which may be seen as a representation of a $\lp$-signature.
+Each command is either a \emph{symbol declaration}
 (\mtt{symbol}), \emph{rewrite rule declaration} (\mtt{rule}),
 or an \emph{import} (\mtt{require}).
 %
-Each $\lambdapi$ file can be seen a representation of a
-signature in the $\lp$-calculus thus:
+The effect of each command is informally described below:
 %
 \begin{enumerate}
 	\item The most primitive form of symbol declaration is
-	      $\prn{\mtt{symbol}\ s : t;}$, which has the effect
-	      of adding $\prn{s : t}$ to the signature.
+	      $\prn{\mtt{symbol}\ s\ {\plur ρ n} : t;}$, which
+	      has the effect of adding
+	      $\prn{s : \prn{\pii{ρ_1}{\ldots\,\pii{ρ_n}{t}}}}$
+	      to the signature.
 
-	\item A rewrite rule $\prn{l ↪ r}$ may be introduced by
+	\item A rewrite rule may be introduced by
 	      $\prn{\mtt{rule}\ ℓ ↪ r;}$.
 	      For user convenience, a list of rewrite rules
 	      may be introduced using the \mtt{with}-syntax.
@@ -135,8 +140,6 @@ signature in the $\lp$-calculus thus:
 	      That is, if $μ$ declares the symbol $s$
 	      and $μ'$ imports $μ$, then the name of $s$ in $μ'$
 	      is $\prn{μ.s}$.
-
-
 \end{enumerate}
 
 
