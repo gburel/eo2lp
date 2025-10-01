@@ -305,9 +305,49 @@
 		  & {∣} & \mtt{sequential}
 		\\
 		  & {∣} & \mtt{injective}
-		\\[1mm]
-		ρ & {⦂} & (x : t) ∣ [\,x : t\,]
 	\end{array}}
+
+
+% --- concrete syntax for lambdapi
+\newcommand{\llam}{\binddot{\msf{λ}}}
+\newcommand{\ppii}{\binddot{\msf{Π}}}
+
+\newcommand{\xsym}[1]{\mtt{@}{#1}}
+\newcommand{\ptrn}[1]{\mtt{\$}{#1}}
+\newcommand{\meta}[1]{\mtt{?}{#1}}
+
+
+\newcommand{\imp}[1]{[\,#1\,]}
+\newcommand{\xpl}[1]{\left(#1\right)}
+
+\newcommand{\lpTermsConcrete}{
+	\begin{array}[t]{r@{\ }l@{\quad}r}
+		% ------------------------------------- %
+
+		t & {⦂}\ \maybe{ι}\,s
+		  & \mcomment{(terms)}
+		\\ &
+		{∣}\ \prn{\app{t}{t'}}
+		∣ \imp{t}
+		\\ &
+		{∣}\ \prn{\llam{ρ}{t}}
+		∣ \prn{\ppii{ρ}{t}}
+		% ------------------------------------- %
+	\end{array}
+	\qquad
+	\begin{array}[t]{r@{\ }l@{\quad}r}
+		% ------------------------------------- %
+		ι & {⦂}\ \mtt{@} ∣ \mtt{\$} ∣ \mtt{?}
+		  & \mcomment{(iden. prefixes)}
+		\\[1mm]
+		ρ & {⦂}
+		\ \xpl{s : t}
+		∣ \imp{s : t}
+		  & \mcomment{(parameters)}
+		% ------------------------------------- %
+	\end{array}
+}
+
 
 \newcommand{\lambdapi}{\textsc{LambdaPi}}
 % \newcommand{\symb}[1]{\mtt{symbol}\ {#1};}
