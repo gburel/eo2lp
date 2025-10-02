@@ -11,6 +11,8 @@
 	$$\lpTermSyntax$$
 	\hrule
 	$$\lpTypingRules$$
+	\hrule
+	$$ \lpWfRules $$
 	%
 \end{boxfigure}
 %
@@ -105,11 +107,22 @@ where $\prn{Γ ⊢_{Σ} e : t}$ may be read as
 	%
 	$$ \lpTermsConcrete $$
 	\hrule
+	$$ \lpPatternSyntax $$
+	\hrule
 	$$ \lpConcreteSyntax $$
 \end{boxfigure}
 %
-Concrete syntax for a fragment of the $\lambdapi$ proof
-assistant is given in \autoref{fig:lpSyntax}.
+\Autoref{fig:lpSyntax} gives the syntax for a fragment of
+the $\lambdapi$ proof assistant.
+%
+Note that the set of terms differs from that of the `pure'
+$\lp$-calculus presented earlier.
+%
+In particular, abstractions take a \emph{parameter},
+which may be either \emph{explicit} or \emph{implicit}.
+%
+Moreover, we also have \emph{explicated terms} of the form $[t]$.
+
 %
 A $\lambdapi$ \emph{file} is a list of \emph{commands},
 which may be seen as a representation of a $\lp$-signature.
