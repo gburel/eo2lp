@@ -4,20 +4,34 @@
 
 \begin{document}
 %
-The area of automated reasoning known as
-\emph{satisfiability modulo theories} (SMT) is aimed
-primarily at developing tools for deciding the
-(un)satisfiability of logical specifications from various
+The phrase \emph{satisfiability modulo theories} (SMT)
+refers to an area of automated reasoning that aims
+to develop tools for deciding the satisfiability of
+logical specifications within a curated selection of
 mathematical theories~\cite{Barrett2021}.
 %
-When a specification is deemed to be unsatisfiable,
-many solvers are capable of demonstrating this fact through
-the generation proof certificates.
+% SMT solvers exist: cvc5, veriT, z3.
+% SMT-LIB standard exists:
+%   2.6 (many-sorted FOL)
+%   2.7 (they added lambdas??)
+%   3.0 proposal -
+%     near to Eunoia but very different.
+%     SMT3 actually allows higher-order SMT problems,
+%     Eunoia just uses higher-order stuff for rules, programs, type definitions, etc.
 %
-Many proof formats exist (e.g., Alethe, LFSC), but the
-inference rules used in their proofs are not specified in
-any formal language.
+
+% proof production
+For specifications deemed unsatisfiabile, many SMT solvers
+are capable of generating \emph{proof certificates}
+that demonstrate this fact.
 %
+Proof generation is not covered by the SMT-LIB standard,
+and so many proof formats have been developed with the
+aim of abstracting over the differences in
+proof generation facilities between solvers.
+%
+% in particular: LFSC, Alethe.
+% however, the rules of Alethe are fixed, and are informal by our standards.
 This can make the development of proof checkers challenging,
 as developers must rewrite parts of their checker for every
 change made to the proof system.
@@ -29,7 +43,8 @@ of an SMT solver.
 \textit{Ethos} is a C++ tool for verifying proofs in the
 Eunoia format.
 
-% eunoia is similar/inspired by the speculative proposal for SMT-LIB 3.
+% eunoia is (similar to)/(inspired by) by the speculative
+% proposal for SMT-LIB 3.
 SMT-LIB is a specification language used for interacting
 with SMT solvers. The syntax and semantics of SMT-LIB are
 standardized by the
