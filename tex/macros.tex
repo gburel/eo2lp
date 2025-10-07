@@ -3,6 +3,7 @@
 \newcommand{\mbf}{\mathbf}
 \newcommand{\mscr}{\mathscr}
 \newcommand{\mtt}[1]{{\color{MaterialPink500}{\texttt{#1}}}}
+\newcommand{\ptn}[1]{{\color{MaterialPurple500}{\texttt{#1}}}}
 \newcommand{\mcomment}[1]{{\color{MaterialIndigo500}{\text{#1}}}}
 \newcommand{\wrapp}[4]{ {\color{#1}{#2}}{#4}{\color{#1}{#3}}}
 \newcommand{\prn}[1]{\wrapp{MaterialGrey600}{\lparen}{\rparen}{#1}}
@@ -202,15 +203,15 @@
 \newcommand{\ppii}{\binddot{\msf{Π}}}
 
 \newcommand{\xsym}[1]{\mtt{@}{#1}}
-\newcommand{\ptrn}[1]{\mtt{\$}{#1}}
+\newcommand{\ptrn}[1]{\ptn{\$#1}}
 \newcommand{\meta}[1]{\mtt{?}{#1}}
 
-\newcommand{\imp}[1]{[\,#1\,]}
+\newcommand{\imp}[1]{[#1]}
 \newcommand{\xpl}[1]{\left(#1\right)}
 
 \newcommand{\lpTermsConcrete}{
 	\begin{array}[t]{r@{\ }l@{\quad}r}
-		χ & {⦂}\ \xpl{s : t} ∣ \imp{s : t}
+		χ & {⦂}\,\xpl{s : t} ∣ \imp{s : t}
 		  & \mcomment{(parameters)}
 		\\[1mm]
 		t & {⦂}\ s ∣ \imp{t} ∣ \prn{\app{t}{t'}}
@@ -223,10 +224,10 @@
 \newcommand{\lpPatternSyntax}{
 	\begin{array}[t]{r@{\ }l@{\quad}r}
 		% ------------------------------------- %
-		p & {⦂}\ \ptrn{s} ∣ s\,\any{p}
+		p & {⦂}\ \ptrn{x} ∣ s\,\any{p}
 		  & \mcomment{(patterns)}
 		\\[1mm]
-		r & {⦂}\ \prn{p ↪ p'}
+		r & {⦂}\ \prn{{s\,\any{p}} ↪ {p'}}
 		  & \mcomment{(rewrite rules)}
 		% ------------------------------------- %
 	\end{array}

@@ -102,7 +102,7 @@ where $\prn{Γ ⊢_{Σ} e : t}$ may be read as
 \subsection{The \textsc{LambdaPi} Proof Assistant}
 %
 \begin{boxfigure}[t!]{fig:lpSyntax}
-	{Concrete syntax for \textsc{LambdaPi} signatures.}
+	{Concrete syntax for \textsc{LambdaPi}.}
 	%
 	$$ \lpTermsConcrete $$
 	\hrule
@@ -117,26 +117,73 @@ the $\lambdapi$ proof assistant.
 Note that the set of terms differs from that of the `pure'
 $\lp$-calculus presented earlier.
 %
-In particular, abstractions take a \emph{parameter},
-which may be either \emph{explicit} or \emph{implicit}.
+The main differences are made to support \emph{implicit bindings},
+which allow the user to omit some subterms and have them
+automatically `inferred' by $\lambdapi$.
 %
-Moreover, we also have \emph{explicated terms} of the form $[t]$.
+To facilitate this, abstractions now bind a \emph{parameter}
+which may be either \emph{explicit} or \emph{implicit}
+(written $\xpl{s : t}$ and $\imp{s : t}$ resp.),
+and we have terms of the form $[t]$ which are
+said to be \emph{explicated}.
+%
+Rewrite rules have a more restricted syntax using
+\emph{patterns} where each pattern is either a
+\emph{pattern variable} $\prn{\ptrn{x}}$,
+or a \emph{pattern application} $\prn{{s}\,{\any{p}}}$
+where $s$ is a symbol called the \emph{head} of the
+pattern.
+%
 
-%
+
+% ---------------------
 A $\lambdapi$ \emph{file} is a list of \emph{commands},
-which may be seen as a representation of a $\lp$-signature.
-Each command is either a \emph{symbol declaration}
-(\mtt{symbol}), \emph{rewrite rule declaration} (\mtt{rule}),
-or an \emph{import} (\mtt{require}).
+which should be seen as a representation of a $\lp$-signature.
+% Each command is either a \emph{symbol declaration}
+% (\mtt{symbol}), \emph{rewrite rule declaration} (\mtt{rule}),
+% or an \emph{import} (\mtt{require}).
 %
-The effect of each command is informally described below:
+To make this correspondence a bit clearer the, the syntax
+and behaviour of each command is discussed in the
+following passages of text:
+
+\subsubsection{Symbol Declaration.}
 %
+Each \emph{symbol declaration} consists of a symbol $s$,
+a list of parameters $\vec ρ$, and a term $t$.
+%
+In general, this has the effect of adding
+$\prn{s : \prn{\ppii{ρ_1}{\ldots\,\ppii{ρ_n}{t}}}}$
+to the signature.
+%
+Optionally, a \emph{modifier} may be given.
+The $\mtt{constant}$ modifier forbids the user from later
+adding rewrite rules with $s$ at the head, and
+$\mtt{sequential}$ alters the rewriting engine of
+$\lambdapi$ so that rewrite rules are `executed'
+in the order they are given in the file.
+%
+A \emph{definition} $\prn{{≔}\,t}$ may be given
+when the \mtt{constant} modifier is not present,
+which has the effect of adding $\prn{s\,\vec{ρ} ↪ t}$
+to the signature.
+
+\subsubsection{Rewrite Rule Declaration.}
+%
+In practice, a rewrite rule $\prn{p ↪ p'}$ is only accepted
+by $\lambdapi$ when $p$ is a pattern application and
+$p'$ uses only those pattern variables occurring in $p$.
+%
+%
+\subsubsection{Implicit Binding.}
+%
+Roughly, implicit binding
+
+
 \begin{enumerate}
 	\item The most primitive form of symbol declaration is
 	      $\prn{\mtt{symbol}\ s\ {\plur ρ n} : t;}$, which
-	      has the effect of adding
-	      $\prn{s : \prn{\pii{ρ_1}{\ldots\,\pii{ρ_n}{t}}}}$
-	      to the signature.
+	      % has the effect
 
 	\item A rewrite rule may be introduced by
 	      $\prn{\mtt{rule}\ ℓ ↪ r;}$.
@@ -154,5 +201,7 @@ The effect of each command is informally described below:
 	      is $\prn{μ.s}$.
 \end{enumerate}
 
+\subsubsection{Reconstruction of Implicit Parameters}
+\label{sssec:lp-implicits}
 
 \end{document}
