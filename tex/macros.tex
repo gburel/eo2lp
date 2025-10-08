@@ -132,7 +132,7 @@
 
 \newcommand{\prodRule}{
 	\begin{prooftree}
-		\hypo{\judge Γ t u}
+		\hypo{\judge Γ t {\TYPE}}
 		\hypo{\judge{Γ, \prn{x : t}}{t'}{u'}}
 		\infer2{\judge Γ {\prn{\pii {x : t} {t'}}} {u'} }
 	\end{prooftree}
@@ -202,21 +202,24 @@
 \newcommand{\llam}{\binddot{\msf{λ}}}
 \newcommand{\ppii}{\binddot{\msf{Π}}}
 
+\newcommand{\prm}[1]{\mbf{#1}}
 \newcommand{\xsym}[1]{\mtt{@}{#1}}
-\newcommand{\ptrn}[1]{\ptn{\$#1}}
 \newcommand{\meta}[1]{\mtt{?}{#1}}
+
+\newcommand{\ptrn}[1]{\ptn{\$#1}}
+\newcommand{\pv}{\mbf{pvars}}
 
 \newcommand{\imp}[1]{[#1]}
 \newcommand{\xpl}[1]{\left(#1\right)}
 
 \newcommand{\lpTermsConcrete}{
 	\begin{array}[t]{r@{\ }l@{\quad}r}
-		χ & {⦂}\,\xpl{s : t} ∣ \imp{s : t}
-		  & \mcomment{(parameters)}
+		\prm{x} & {⦂}\,\xpl{s : t} ∣ \imp{s : t}
+		        & \mcomment{(parameters)}
 		\\[1mm]
-		t & {⦂}\ s ∣ \imp{t} ∣ \prn{\app{t}{t'}}
-		∣ \prn{\llam{χ}{t}} ∣ \prn{\ppii{χ}{t}}
-		  & \mcomment{(terms)}
+		t       & {⦂}\ s ∣ \imp{t} ∣ \prn{\app{t}{t'}}
+		∣ \prn{\llam{\prm x}{t}} ∣ \prn{\ppii{\prm x}{t}}
+		        & \mcomment{(terms)}
 	\end{array}
 }
 

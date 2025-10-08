@@ -127,14 +127,21 @@ which may be either \emph{explicit} or \emph{implicit}
 and we have terms of the form $[t]$ which are
 said to be \emph{explicated}.
 %
-Rewrite rules have a more restricted syntax using
-\emph{patterns} where each pattern is either a
-\emph{pattern variable} $\prn{\ptrn{x}}$,
-or a \emph{pattern application} $\prn{{s}\,{\any{p}}}$
-where $s$ is a symbol called the \emph{head} of the
-pattern.
-%
+Hereinafter, we may write $\prn{t_1 → t_2}$ for the term
+$\prn{\ppii{(x : t_1)}{t_2}}$, where $x$ is some `fresh'
+symbol that does not occur free in $t_2$.
 
+
+We also introduce a syntax of \emph{patterns} which is
+used within declarations of rewrite rules.
+%
+Each pattern is either a \emph{pattern variable}
+$\prn{\ptrn{x}}$ or a \emph{pattern application}
+$\prn{{s}\,{\any{p}}}$, where $s$ is called
+the \emph{head} of the pattern.
+%
+Hereinafter, let $\pv(p)$ denote the set of
+pattern variables occurring in some pattern $p$.
 
 % ---------------------
 A $\lambdapi$ \emph{file} is a list of \emph{commands},
@@ -143,7 +150,7 @@ which should be seen as a representation of a $\lp$-signature.
 % (\mtt{symbol}), \emph{rewrite rule declaration} (\mtt{rule}),
 % or an \emph{import} (\mtt{require}).
 %
-To make this correspondence a bit clearer the, the syntax
+To make this correspondence a bit clearer, the syntax
 and behaviour of each command is discussed in the
 following passages of text:
 
@@ -157,51 +164,95 @@ $\prn{s : \prn{\ppii{ρ_1}{\ldots\,\ppii{ρ_n}{t}}}}$
 to the signature.
 %
 Optionally, a \emph{modifier} may be given.
-The $\mtt{constant}$ modifier forbids the user from later
+The $\prn{\mtt{constant}}$ modifier forbids the user from later
 adding rewrite rules with $s$ at the head, and
-$\mtt{sequential}$ alters the rewriting engine of
-$\lambdapi$ so that rewrite rules are `executed'
-in the order they are given in the file.
+$\prn{\mtt{sequential}}$ alters the rewriting strategy of
+$\lambdapi$ so that rewrite rules with head $s$
+are `matched' in the order they are given in the file.
 %
 A \emph{definition} $\prn{{≔}\,t}$ may be given
-when the \mtt{constant} modifier is not present,
-which has the effect of adding $\prn{s\,\vec{ρ} ↪ t}$
-to the signature.
+when the $\prn{\mtt{constant}}$ modifier is not present,
+which has the effect of adding the rewrite rule
+$\prn{s\,\vec{ρ} ↪ t}$ to the signature.
 
 \subsubsection{Rewrite Rule Declaration.}
 %
-In practice, a rewrite rule $\prn{p ↪ p'}$ is only accepted
-by $\lambdapi$ when $p$ is a pattern application and
-$p'$ uses only those pattern variables occurring in $p$.
+Rewrite rules are introduced with the $\prn{\mtt{rule}}$
+command.
+For user convenience, a list of rewrite rules
+may be introduced using the keyword $\prn{\mtt{with}}$.
 %
+In practice, a rewrite rule $\prn{p ↪ p'}$ will only be
+accepted by $\lambdapi$ if $p$ is a pattern application
+and $\pv(p') ⊆ \pv(p)$.
 %
-\subsubsection{Implicit Binding.}
+The rewrite rule(s) will be added to the signature in this
+case, effectively augmenting the typechecking
+procedure of $\lambdapi$ to behave `modulo' those rule(s).
+
+\subsubsection{Theory Import.}
 %
-Roughly, implicit binding
+$\lambdapi$ uses a lightweight module system which allows
+users to develop formalizations across multiple files,
+possibly making use of third-party libraries.
+%
+Within this document, we use the command
+$\prn{\mtt{require}\ \mtt{open}\ {\vec μ}}$
+where $\vec μ$ is a list of $\prn{.}$-delimited \emph{paths}.
+This command has the effect of importing all symbol
+declarations and rewrite rules from the specified files.
+
+\subsubsection{Type Universes.}
+%
+Because the type system of $\lambdapi$ does not allow
+`quantifying' over types
+(i.e., $\prn{\TYPE → \TYPE}$ is not well-typed),
+most $\lambdapi$ developments make use of `Tarski-style'
+universes to support treating types as `first-class citizens'.
+%
+In particular, we use the following symbol declarations:
+%
+$$
+	\begin{array}[t]{l@{\ {:}\ }l}
+		\mtt{symbol}\ \msf{Set} & \TYPE;                              \\
+		%
+		\mtt{symbol}\ \msf{El}  & \msf{Set} → \TYPE;                  \\
+		%
+		\mtt{symbol}\ \prn{⤳}   & \msf{Set} → \msf{Set} →  \msf{Set}; \\
+	\end{array}
+$$
+%
+We work `within' $\msf{Set}$ when embedding `many-sorted'
+logics in $\lambdapi$. Namely, the translation outlined
+in this document identifies Eunoia's types with terms of
+type $\msf{Set}$ and uses $\msf{El}$ to `lift' these to
+top-level $\lambdapi$ types.
+%
+Moreover, the (infix) symbol $\prn{⤳}$ is used as a
+`set-level' type constructor, where the following rewrite
+rule specifies how these sets are `lifted'.
+%
+$$
+	\mtt{rule}\ \msf{El}\,\prn{\ptrn{α} ⤳ \ptrn{β}}
+	\ {↪}\
+	\prn{{\msf{El}\,\ptrn{α}} → {\msf{El}\,\ptrn{β}}};
+$$
 
 
-\begin{enumerate}
-	\item The most primitive form of symbol declaration is
-	      $\prn{\mtt{symbol}\ s\ {\plur ρ n} : t;}$, which
-	      % has the effect
-
-	\item A rewrite rule may be introduced by
-	      $\prn{\mtt{rule}\ ℓ ↪ r;}$.
-	      For user convenience, a list of rewrite rules
-	      may be introduced using the \mtt{with}-syntax.
-
-	\item Given an \emph{environment} $Θ$,
-	      the contents of files named by $\plur μ n$
-	      may be imported using the $\mtt{require}$ command.
-	      %
-	      By default, imported symbols are qualified by
-	      the name of the file they were defined by.
-	      That is, if $μ$ declares the symbol $s$
-	      and $μ'$ imports $μ$, then the name of $s$ in $μ'$
-	      is $\prn{μ.s}$.
-\end{enumerate}
-
-\subsubsection{Reconstruction of Implicit Parameters}
+\subsubsection{Implicit Parameters.}
 \label{sssec:lp-implicits}
+%
+As mentioned above, the presence of `implicit' bindings in
+abstractions can enable the user to omit some terms in
+applications, and have them automatically `inferred' by
+$\lambdapi$.
+%
+This mechanism is particularly useful for implementing
+\emph{type polymorphism}, where a function may have
+different behaviours depending on the types of its arguments.
+%
+To make this notion more precise, consider the following
+symbol declaration:
+$$\prn{\mtt{symbol}\ \msf{foo} [α : \msf{Set}] :   }$$
 
 \end{document}
