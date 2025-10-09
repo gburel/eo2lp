@@ -45,17 +45,26 @@
 \newcommand{\eo}{\msf{eo}}
 \newcommand{\sym}[1]{\msf{s}_{\msf{#1}}}
 \newcommand{\eoapp}[2]{\prn{#1\ #2}}
-
 % --- figures for `eoas.tex` ------------------------------
+% s & {⦂}\ \sym 0 ∣ \sym 1 ∣ \ldots
+% 		& \mcomment{(symbols)}         &
+%
 \newcommand{\eoTermSyntax}{
 	\begin{array}[t]{r@{\ }l@{\quad}l@{\qquad}r@{\ }l@{\quad}l}
 		%!----------------------------------------!%
-		s & {⦂}\ \sym 0 ∣ \sym 1 ∣ \ldots                                                                                                                                                                                                                                                     & \mcomment{(symbols)}           & e & {⦂}\ s \mid \prn{{s}\,\many{e}}  & \mcomment{(terms)}      \\[1mm]
-		ν & {⦂}\ \mtt{:implicit} \mid \mtt{:list}                                                                                                                                                                                                                                             & \mcomment{(var. attributes)}   & ρ & {⦂}\ \prn{s\ e\ \maybe{ν}}\qquad & \mcomment{(parameters)} \\[1mm]
-		α & \multicolumn{4}{@{}l}{ \begin{array}[t]{@{}l@{\ }l@{\quad}r}{⦂} & \mtt{:right-assoc} ∣ \mtt{:right-assoc-nil}\some{t} \\ {∣} & \mtt{:left-assoc} ∣ \mtt{:left-assoc-nil}\some{t} \\ {∣} & \mtt{:chainable}\some{s} ∣ \mtt{:pairwise}\some{s} ∣ \mtt{:binder}\some{s}\end{array} } & \mcomment{(const. attributes)}
+		e & {⦂}\ s \mid \prn{{s}\,\many{e}}  & \mcomment{(terms)}      &
+		ρ & {⦂}\ \prn{s\ e\ \maybe{ν}}\qquad & \mcomment{(parameters)}   \\[1mm]
 	\end{array}
 }
 
+\newcommand{\eoAttrSyntax}{
+	\begin{array}[t]{r@{\ }c@{\ }l@{\quad}l}
+		ν & {⦂} & \mtt{:implicit} \mid \mtt{:list}                                           & \mcomment{(var. attributes)}   \\[1mm]
+		α & {⦂} & \mtt{:right-assoc} ∣ \mtt{:right-assoc-nil}\some{t}                        & \mcomment{(const. attributes)} \\
+		  & {∣} & \mtt{:left-assoc} ∣ \mtt{:left-assoc-nil}\some{t}                                                           \\
+		  & {∣} & \mtt{:chainable}\some{s} ∣ \mtt{:pairwise}\some{s} ∣ \mtt{:binder}\some{s}
+	\end{array}
+}
 \newcommand{\eoCommandSyntax}{
 	\begin{array}[t]{r@{\ }l}
 		δ & \begin{array}[t]{c@{\ }l}{⦂} & \prn{\mtt{declare-const}\ s\ e\ α} \\ {∣} & \prn{\mtt{declare-consts}\ ℓ\ e} \\ {∣} & \prn{\mtt{declare-parameterized-const}\ s\ {\vec ρ}\ e\ α} \\ {∣} & {\color{MaterialGrey600}{\big\lparen}} \mtt{declare-rule}\ s\ \any{ρ}\
@@ -204,7 +213,7 @@
 
 \newcommand{\prm}[1]{\mbf{#1}}
 \newcommand{\xsym}[1]{\mtt{@}{#1}}
-\newcommand{\meta}[1]{\mtt{?}{#1}}
+\newcommand{\meta}[1]{\ptn{?{#1}}}
 
 \newcommand{\ptrn}[1]{\ptn{\$#1}}
 \newcommand{\pv}{\mbf{pvars}}
@@ -214,12 +223,12 @@
 
 \newcommand{\lpTermsConcrete}{
 	\begin{array}[t]{r@{\ }l@{\quad}r}
-		\prm{x} & {⦂}\,\xpl{s : t} ∣ \imp{s : t}
-		        & \mcomment{(parameters)}
+		ρ & {⦂}\,\xpl{s : t} ∣ \imp{s : t}
+		  & \mcomment{(parameters)}
 		\\[1mm]
-		t       & {⦂}\ s ∣ \imp{t} ∣ \prn{\app{t}{t'}}
-		∣ \prn{\llam{\prm x}{t}} ∣ \prn{\ppii{\prm x}{t}}
-		        & \mcomment{(terms)}
+		t & {⦂}\ s ∣ \imp{t} ∣ \prn{\app{t}{t'}}
+		∣ \prn{\llam{ρ}{t}} ∣ \prn{\ppii{ρ}{t}}
+		  & \mcomment{(terms)}
 	\end{array}
 }
 
@@ -227,10 +236,10 @@
 \newcommand{\lpPatternSyntax}{
 	\begin{array}[t]{r@{\ }l@{\quad}r}
 		% ------------------------------------- %
-		p & {⦂}\ \ptrn{x} ∣ s\,\any{p}
+		θ & {⦂}\ \ptrn{x} ∣ s\,\any{θ}
 		  & \mcomment{(patterns)}
 		\\[1mm]
-		r & {⦂}\ \prn{{s\,\any{p}} ↪ {p'}}
+		r & {⦂}\ \prn{{s\,\any{θ}} ↪ {θ'}}
 		  & \mcomment{(rewrite rules)}
 		% ------------------------------------- %
 	\end{array}
@@ -256,3 +265,7 @@
 % \newcommand{\symb}[1]{\mtt{symbol}\ {#1};}
 
 % \newcommand{\symb}[1]{\mtt{rule}\ {#1};}
+
+\newcommand{\Set}{\msf{Set}}
+\newcommand{\El}[1]{\msf{El}\,{#1}}
+\newcommand{\Ell}[1]{\msf{El}\,\prn{#1}}

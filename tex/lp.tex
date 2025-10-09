@@ -102,7 +102,7 @@ where $\prn{Γ ⊢_{Σ} e : t}$ may be read as
 \subsection{The \textsc{LambdaPi} Proof Assistant}
 %
 \begin{boxfigure}[t!]{fig:lpSyntax}
-	{Concrete syntax for \textsc{LambdaPi}.}
+	{Syntax for the \textsc{LambdaPi} proof assistant.}
 	%
 	$$ \lpTermsConcrete $$
 	\hrule
@@ -253,6 +253,41 @@ different behaviours depending on the types of its arguments.
 %
 To make this notion more precise, consider the following
 symbol declaration:
-$$\prn{\mtt{symbol}\ \msf{foo} [α : \msf{Set}] :   }$$
+$$\mtt{symbol}\ \msf{foo}\ [α : \msf{Set}] : \Ell{α ⤳ α ⤳ α};$$
+Modulo rewriting, the type of $\msf{foo}$ is
+$\prn{
+		\ppii{\imp{α : \Set}}{
+			\El α → \El α → \El α
+		}
+	}$.
+%
+Because this type contains implicit bindings,
+$\lambdapi$ also registers an `explicit version' of
+$\msf{foo}$ named $\xsym{\msf{foo}}$ whose type
+contains only explicit bindings.
+%
+Hereinafter, an application like
+$\prn{\msf{foo}\,x\,y}$ generates a `schematic term'
+$\prn{\xsym{\msf{foo}}\,\meta{α}\,x\,y}$
+with constraints
+$\{ \meta{α} : \Set,\, x : \El{\meta α},\, y : \El{\meta α} \}$.
+%
+Given a suitable context, $\lambdapi$ is able to `solve'
+these constraints to infer a `concrete' value for $\meta α$.
+%
+% For example, given a context with
+% $\prn{ℕ : \Set}$ and
+% $\prn{x,y : \El ℕ}$ present,
+% the term $\prn{\msf{foo}\,{x}\,{y}}$
+% can be seen as `syntactic sugar'
+% for $\prn{\xsym{\msf{foo}}\,ℕ\,x\,y}$.
+%
+Alternatively, a user can `force' values that would
+otherwise be automatically inferred by using explicated
+terms
+(e.g.,
+$\prn{\msf{foo}\,[ℕ]\,x\,y}$
+is equivalent to
+$\prn{\xsym{\msf{foo}}\,ℕ\,x\,y}$).
 
 \end{document}
