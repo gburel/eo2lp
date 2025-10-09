@@ -52,29 +52,41 @@
 \newcommand{\eoTermSyntax}{
 	\begin{array}[t]{r@{\ }l@{\quad}l@{\qquad}r@{\ }l@{\quad}l}
 		%!----------------------------------------!%
-		e & {⦂}\ s \mid \prn{{s}\,\many{e}}  & \mcomment{(terms)}      &
-		ρ & {⦂}\ \prn{s\ e\ \maybe{ν}}\qquad & \mcomment{(parameters)}   \\[1mm]
+		t & {⦂}\ s \mid \prn{{s}\,\many{t}}  & \mcomment{(terms)}      &
+		ρ & {⦂}\ \prn{s\ t\ \maybe{ν}}\qquad & \mcomment{(parameters)}   \\[1mm]
 	\end{array}
 }
 
 \newcommand{\eoAttrSyntax}{
 	\begin{array}[t]{r@{\ }c@{\ }l@{\quad}l}
-		ν & {⦂} & \mtt{:implicit} \mid \mtt{:list}                                           & \mcomment{(var. attributes)}   \\[1mm]
-		α & {⦂} & \mtt{:right-assoc} ∣ \mtt{:right-assoc-nil}\some{t}                        & \mcomment{(const. attributes)} \\
-		  & {∣} & \mtt{:left-assoc} ∣ \mtt{:left-assoc-nil}\some{t}                                                           \\
-		  & {∣} & \mtt{:chainable}\some{s} ∣ \mtt{:pairwise}\some{s} ∣ \mtt{:binder}\some{s}
+		ν & {⦂} & \mtt{:implicit} \mid \mtt{:list}                       & \mcomment{(var. attributes)}   \\[1mm]
+		α & {⦂} & \mtt{:right-assoc} ∣ \mtt{:right-assoc-nil}\,\some{t}  & \mcomment{(const. attributes)} \\
+		  & {∣} & \mtt{:left-assoc} ∣ \mtt{:left-assoc-nil}\,\some{t}                                     \\
+		  & {∣} & \mtt{:chainable}\,\some{s} ∣ \mtt{:pairwise}\,\some{s}
 	\end{array}
 }
+
 \newcommand{\eoCommandSyntax}{
-	\begin{array}[t]{r@{\ }l}
-		δ & \begin{array}[t]{c@{\ }l}{⦂} & \prn{\mtt{declare-const}\ s\ e\ α} \\ {∣} & \prn{\mtt{declare-consts}\ ℓ\ e} \\ {∣} & \prn{\mtt{declare-parameterized-const}\ s\ {\vec ρ}\ e\ α} \\ {∣} & {\color{MaterialGrey600}{\big\lparen}} \mtt{declare-rule}\ s\ \any{ρ}\
-             \\ & \quad \maybe{\mtt{:assumption}\,e}\
-             \\ & \quad \maybe{\mtt{:premises}\,\any{φ}}\
-             \\ & \quad \maybe{\mtt{:args}\,\any{e}}\
-             \\ & \quad \maybe{\mtt{:requires}\,{\many{e,e'}}}\
-             \\ & \quad \mtt{:conclusion}\,{ψ} {\color{MaterialGrey600}{\big\rparen}} \\ {∣} & \prn{\mtt{declare-type}\ {s}\ \prn{\any e}} \\ {∣} & \prn{\mtt{define}\ {s} \ \maybe{\vec ρ} \ e\
-             \ \maybe{\mtt{:type}\,e'}}                           \\ {∣} & \prn{\mtt{define-type}\ {s} \ \prn{\any e} \ e'} \\ {∣} & \prn{\mtt{include}\ \some{\msf{string}}} \\ {∣} & \prn{\mtt{program}\ x \ \any{ρ} \ \some{\mtt{:signature}\,\prn{\many{e}}\,e'} \ \prn{\many{e\ e'}} }\end{array}
-	\end{array}}
+	\begin{array}[t]{r@{\ }l@{\ }l}
+		δ & \begin{array}[t]{c@{\ }l}
+			    {⦂} & \prn{\mtt{include}\ \some{\msf{string}}}                                                             \\
+			    {∣} & \prn{\mtt{declare-const}\ s\ t\ \maybe{α}}                                                           \\
+			    % {∣} & \prn{\mtt{declare-consts}\ ℓ\ e}                                                                     \\
+			    {∣} & \prn{\mtt{declare-parameterized-const}\ s\ \any{ρ}\ t\ \maybe{α}}                                    \\
+			    {∣} & \prn{\mtt{define}\ {s} \ \maybe{\vec ρ} \ e\ \ \maybe{\mtt{:type}\,e'}}                              \\
+			    {∣} & \prn{\mtt{program}\ x \ \any{ρ} \ \some{\mtt{:signature}\,\prn{\many{e}}\,e'} \ \prn{\many{e\ e'}} } \\
+			    {∣} & {\color{MaterialGrey600}{\lparen}}
+			    \mtt{declare-rule}\ s\ \any{ρ}\
+			    % \\ & \quad \maybe{\mtt{:assumption}\,e}\
+			    \\ & \quad \maybe{\mtt{:premises}\,\prn{\many{t_p}}}\
+			    \\ & \quad \maybe{\mtt{:args}\,\prn{\many{t_a}}}\
+			    \\ & \quad \maybe{\mtt{:requires}\,\prn{\many{\prn{t_r\ t_r'}}}}\
+			    \\ & \quad \mtt{:conclusion}\,{t_c} {\color{MaterialGrey600}{\rparen}} \\
+			    % {∣} & \prn{\mtt{declare-type}\ {s}\ \prn{\any e}}                                                          \\
+			    % {∣} & \prn{\mtt{define-type}\ {s} \ \prn{\any e} \ e'}                                                     \\
+		    \end{array}
+	\end{array}
+}
 
 \newcommand{\eoPrfCommandSyntax}{
 	\begin{array}[t]{r@{\ }l}
