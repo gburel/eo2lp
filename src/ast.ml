@@ -210,25 +210,3 @@ let rec eo_binop_tys typ =
     | _ -> (t1,t2)
     end
   | _ -> failwith "Not the type of a binary operator."
-
-(* in SMT3 but not Eunoia.
-  | Import of string list
-  | Open of string
------------------------------
-  | DefineSyntax of syntax_rule * syntax_rule list
-  | DefineValues of eo_term * eo_term * eo_term
-  | DefineModule of ...
-  | DeclareInductiveTypes of  ...
-  | DefineEnumerationType of  ...
-*)
-
-(* in Eunoia but not SMT3
-  | DeclareRule of string * eo_var list * assm option * prems option * args option * reqs option * eo_term
-  | DeclareConsts of lit_category * eo_term
-  | DeclareParamConst of string * eo_var list * eo_term * attr list
-  | DeclareOracleFun of string * eo_term list * eo_term * string
-  | Include of string
-  | Program of string * eo_var list * eo_term list * eo_term * (eo_term * eo_term) list
-  | Reference of string * string option
-
-*)

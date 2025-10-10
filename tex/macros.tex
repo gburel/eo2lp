@@ -67,36 +67,35 @@
 }
 
 \newcommand{\eoCommandSyntax}{
-	\begin{array}[t]{r@{\ }l@{\ }l}
+	\begin{array}[t]{r@{\ }l@{\quad}l}
 		δ & \begin{array}[t]{c@{\ }l}
-			    {⦂} & \prn{\mtt{include}\ \some{\msf{string}}}                                                             \\
-			    {∣} & \prn{\mtt{declare-const}\ s\ t\ \maybe{α}}                                                           \\
-			    % {∣} & \prn{\mtt{declare-consts}\ ℓ\ e}                                                                     \\
+			    {⦂} & \prn{\mtt{declare-const}\ s\ t\ \maybe{α}}                                                           \\
 			    {∣} & \prn{\mtt{declare-parameterized-const}\ s\ \any{ρ}\ t\ \maybe{α}}                                    \\
 			    {∣} & \prn{\mtt{define}\ {s} \ \maybe{\vec ρ} \ e\ \ \maybe{\mtt{:type}\,e'}}                              \\
 			    {∣} & \prn{\mtt{program}\ x \ \any{ρ} \ \some{\mtt{:signature}\,\prn{\many{e}}\,e'} \ \prn{\many{e\ e'}} } \\
 			    {∣} & {\color{MaterialGrey600}{\lparen}}
 			    \mtt{declare-rule}\ s\ \any{ρ}\
-			    % \\ & \quad \maybe{\mtt{:assumption}\,e}\
 			    \\ & \quad \maybe{\mtt{:premises}\,\prn{\many{t_p}}}\
 			    \\ & \quad \maybe{\mtt{:args}\,\prn{\many{t_a}}}\
 			    \\ & \quad \maybe{\mtt{:requires}\,\prn{\many{\prn{t_r\ t_r'}}}}\
 			    \\ & \quad \mtt{:conclusion}\,{t_c} {\color{MaterialGrey600}{\rparen}} \\
-			    % {∣} & \prn{\mtt{declare-type}\ {s}\ \prn{\any e}}                                                          \\
-			    % {∣} & \prn{\mtt{define-type}\ {s} \ \prn{\any e} \ e'}                                                     \\
+			    {∣} & \prn{\mtt{include}\ μ}                                                                               \\
 		    \end{array}
+		  & \mcomment{(std. commands)}
 	\end{array}
 }
 
 \newcommand{\eoPrfCommandSyntax}{
-	\begin{array}[t]{r@{\ }l}
+	\begin{array}[t]{r@{\ }l@{\quad}l}
 		π & \begin{array}[t]{c@{\ }l}{⦂} & \prn{\mtt{assume}\ s\ e} \\ {∣} & \prn{\mtt{assume-push}\ s\ e} \\ {∣} & \prn{\mtt{step}\ s\ \maybe{e}\
              \prn{\mtt{:rule}\ s_r}\
              \maybe{\mtt{:premises}\ {\vec φ}}\
              \maybe{\mtt{:args}\ {\vec e}} }            \\ {∣} & \prn{\mtt{step-pop}\ s\ \maybe{e}\
              \prn{\mtt{:rule}\ {s_r}}\
              \maybe{\mtt{:premises}\ {\vec φ}}\
-             \maybe{\mtt{:args}\ {\vec e}} }\end{array}
+             \maybe{\mtt{:args}\ {\vec e}} }
+		    \end{array}
+		  & \mcomment{(proof commands)}
 	\end{array}}
 
 % --- macros for `lp.tex` ------------------------------

@@ -5,13 +5,15 @@
   (! Type :var U :implicit)
   (-> S T U) S T U))
 
+; Core
 (declare-const _ (-> (! Type :var S :implicit) (! Type :var T :implicit) (-> S T) S T))
 
-
+; Core.
 (declare-type Bool ())
 (declare-const true Bool)
 (declare-const false Bool)
 
+; Core
 (declare-const Proof (-> Bool Type))
 
 (program eo::typeof
