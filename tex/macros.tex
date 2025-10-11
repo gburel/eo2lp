@@ -69,17 +69,21 @@
 \newcommand{\eoCommandSyntax}{
 	\begin{array}[t]{r@{\ }l@{\quad}l}
 		δ & \begin{array}[t]{c@{\ }l}
-			    {⦂} & \prn{\mtt{declare-const}\ s\ t\ \maybe{α}}                                                           \\
-			    {∣} & \prn{\mtt{declare-parameterized-const}\ s\ \any{ρ}\ t\ \maybe{α}}                                    \\
-			    {∣} & \prn{\mtt{define}\ {s} \ \maybe{\vec ρ} \ e\ \ \maybe{\mtt{:type}\,e'}}                              \\
-			    {∣} & \prn{\mtt{program}\ x \ \any{ρ} \ \some{\mtt{:signature}\,\prn{\many{e}}\,e'} \ \prn{\many{e\ e'}} } \\
+			    {⦂} & \prn{\mtt{declare-const}\ s\ t\ \maybe{α}}                              \\
+			    {∣} & \prn{\mtt{declare-parameterized-const}\ s\ \prn{\vec{ρ}}\ t\ \maybe{α}} \\
+			    {∣} & \prn{\mtt{define}\ {s} \ \prn{\vec ρ} \ t\ \ \maybe{\mtt{:type}\,t'}}   \\
+			    {∣} & \prn{\mtt{program}\ x \ \prn{\vec ρ}\
+				    \mtt{:signature}\,\prn{\vec{t}}\,t'\
+				    \prn{\many{\prn{t_{l}\ t_{r}}}}
+			    }                                                                             \\
 			    {∣} & {\color{MaterialGrey600}{\lparen}}
-			    \mtt{declare-rule}\ s\ \any{ρ}\
-			    \\ & \quad \maybe{\mtt{:premises}\,\prn{\many{t_p}}}\
-			    \\ & \quad \maybe{\mtt{:args}\,\prn{\many{t_a}}}\
-			    \\ & \quad \maybe{\mtt{:requires}\,\prn{\many{\prn{t_r\ t_r'}}}}\
-			    \\ & \quad \mtt{:conclusion}\,{t_c} {\color{MaterialGrey600}{\rparen}} \\
-			    {∣} & \prn{\mtt{include}\ μ}                                                                               \\
+			    \mtt{declare-rule}\ s\ \prn{\vec ρ}\
+			    \\ & \quad \maybe{\mtt{:premises}\ \prn{\vec{t}_{\text{prems}}}}\
+			    \\ & \quad \maybe{\mtt{:args}\ \prn{\vec{t}_{\text{args}}}}\
+			    \\ & \quad \maybe{\mtt{:requires}\ \prn{\many{\prn{t_l\ t_r'}}}}\
+			    \\ & \quad \mtt{:conclusion}\ {t_{\text{conc}}}
+			    {\color{MaterialGrey600}{\rparen}}                                            \\
+			    {∣} & \prn{\mtt{include}\ μ}                                                  \\
 		    \end{array}
 		  & \mcomment{(std. commands)}
 	\end{array}
