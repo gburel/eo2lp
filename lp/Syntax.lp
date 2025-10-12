@@ -1,8 +1,14 @@
 require open Logic.U.Arrow;
 
+symbol nat : Set;
 symbol foo : Set → Set;
-
 rule foo $x ↪ $x;
+
+type foo;
+compute foo nat;
+
+type foo foo;
+
 
 symbol 𝒮 : TYPE;
 builtin "String" ≔ 𝒮;

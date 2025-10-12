@@ -4,12 +4,31 @@
 
 \begin{document}
 %
-The phrase \emph{satisfiability modulo theories} (SMT)
-refers to an area of automated reasoning that aims
-to develop tools for deciding the satisfiability of
-logical specifications within a curated selection of
-mathematical theories~\cite{Barrett2021}.
+The area of automated reasoning research known as
+\emph{satisfiability modulo theories} (SMT)
+aims to develop tools capable of deciding
+the satisfiability of logical specifications
+within a curated selection of mathematical theories~\cite{Barrett2021}.
 %
+% Whilst many  accomplish this task
+% with similar strategies, the approach employed by
+% a solver can vary, meaning that different solvers
+% will excel in different theories.
+%
+Towards the aim of standardizing and benchmarking
+such tools (known as SMT \emph{solvers}),
+the \emph{SMT library initivate} oversee the development of
+the \emph{SMT-LIB standard}.
+%
+The standard specifies a common language used
+for interacting with solvers, including a detailed
+description of the mathematical foundations of the SMT problem.
+
+% Theories are typically first-order.
+% Since SMT is an extension of the SAT problem,
+% SMT goes beyond the traditional SAT problem, logical
+% specifications are first-order logic.
+
 % SMT solvers exist: cvc5, veriT, z3.
 % SMT-LIB standard exists:
 %   2.6 (many-sorted FOL)
@@ -20,22 +39,31 @@ mathematical theories~\cite{Barrett2021}.
 %     Eunoia just uses higher-order stuff for rules, programs, type definitions, etc.
 %
 
-% proof production
-For specifications deemed unsatisfiabile, many SMT solvers
-are capable of generating \emph{proof certificates}
-that demonstrate this fact.
-%
-Proof generation is not covered by the SMT-LIB standard,
-and so many proof formats have been developed with the
-aim of abstracting over the differences in
-proof generation facilities between solvers.
-%
-% in particular: LFSC, Alethe.
-% however, the rules of Alethe are fixed, and are informal by our standards.
-This can make the development of proof checkers challenging,
-as developers must rewrite parts of their checker for every
-change made to the proof system.
+% some mention of SMT solvers used by Isabelle, Coq, Lean, etc.
 
+% proof production
+For specifications deemed unsatisfiable, many solvers
+can generate \emph{proof certificates} that demonstrate
+the absurdity of the assertions made by the specification.
+%
+Proof generation is however not covered by the SMT-LIB
+standard, which has led to the development of various proof
+formats for SMT solvers.
+%%
+In particular, the \emph{Alethe} format draws from
+a fixed set of rules designed to reflect the
+reasoning mechanisms of SMT solvers.
+%
+The common proof interface provided by Alethe has
+enabled interoperability between solvers and other
+automated reasoning tools;
+particularly \emph{proof assistants}.
+%
+Unfortunately, long-term interoperability can be
+challenging, as developers must rewrite aspects
+of their tools to maintain parity with the evolving
+Alethe specification.
+%
 \textit{Eunoia} is a logical framework that allows formalizing
 the inference rules used by the proof production facilities
 of an SMT solver.
@@ -43,16 +71,16 @@ of an SMT solver.
 \textit{Ethos} is a C++ tool for verifying proofs in the
 Eunoia format.
 
-% eunoia is (similar to)/(inspired by) by the speculative
-% proposal for SMT-LIB 3.
-SMT-LIB is a specification language used for interacting
-with SMT solvers. The syntax and semantics of SMT-LIB are
-standardized by the
-SMT-LIB Initiative~\autocite{Barrett2015-standard}).
-%
-Generally speaking, SMT-LIB scripts specify satisfiability
-problems for many-sorted first-order logic (MFOL) and
-provide instructions for solvers to interact with these
-specifications.
+% % eunoia is (similar to)/(inspired by) by the speculative
+% % proposal for SMT-LIB 3.
+% SMT-LIB is a specification language used for interacting
+% with SMT solvers. The syntax and semantics of SMT-LIB are
+% standardized by the
+% SMT-LIB Initiative~\autocite{Barrett2015-standard}).
+% %
+% Generally speaking, SMT-LIB scripts specify satisfiability
+% problems for many-sorted first-order logic (MFOL) and
+% provide instructions for solvers to interact with these
+% specifications.
 %
 \end{document}
