@@ -43,10 +43,18 @@
 % sets for syntactic categories
 \newcommand{\Term}{\msf{Term}}
 
+
+
+% -------------- Eunoia ------------------------------------
 % eunoia symbols
 \newcommand{\eo}{\msf{eo}}
 \newcommand{\sym}[1]{\msf{s}_{\msf{#1}}}
 \newcommand{\eoapp}[2]{\prn{#1\ #2}}
+
+\newcommand{\ctyp}{\mbf{ctyp}}
+\newcommand{\att}{\mbf{att}}
+
+
 % --- figures for `eoas.tex` ------------------------------
 % s & {⦂}\ \sym 0 ∣ \sym 1 ∣ \ldots
 % 		& \mcomment{(symbols)}         &
@@ -74,7 +82,7 @@
 			    {⦂} & \prn{\mtt{declare-const}\ s\ t\ \maybe{α}}                              \\
 			    {∣} & \prn{\mtt{declare-parameterized-const}\ s\ \prn{\vec{ρ}}\ t\ \maybe{α}} \\
 			    {∣} & \prn{\mtt{define}\ {s} \ \prn{\vec ρ} \ t\ \ \maybe{\mtt{:type}\,t'}}   \\
-			    {∣} & \prn{\mtt{program}\ x \ \prn{\vec ρ}\
+			    {∣} & \prn{\mtt{program}\ {s} \ \prn{\vec ρ}\
 				    \mtt{:signature}\,\prn{\vec{t}}\,t'\
 				    \prn{\many{\prn{t_{l}\ t_{r}}}}
 			    }                                                                             \\
@@ -93,13 +101,17 @@
 
 \newcommand{\eoPrfCommandSyntax}{
 	\begin{array}[t]{r@{\ }l@{\quad}l}
-		π & \begin{array}[t]{c@{\ }l}{⦂} & \prn{\mtt{assume}\ s\ e} \\ {∣} & \prn{\mtt{assume-push}\ s\ e} \\ {∣} & \prn{\mtt{step}\ s\ \maybe{e}\
-             \prn{\mtt{:rule}\ s_r}\
-             \maybe{\mtt{:premises}\ {\vec φ}}\
-             \maybe{\mtt{:args}\ {\vec e}} }            \\ {∣} & \prn{\mtt{step-pop}\ s\ \maybe{e}\
-             \prn{\mtt{:rule}\ {s_r}}\
-             \maybe{\mtt{:premises}\ {\vec φ}}\
-             \maybe{\mtt{:args}\ {\vec e}} }
+		π & \begin{array}[t]{c@{\ }l}{⦂}
+			        & \prn{\mtt{assume}\ s\ e}       \\
+			    % {∣} & \prn{\mtt{assume-push}\ s\ e}      \\
+			    {∣} & \prn{\mtt{step}\ s\ \maybe{e}\
+			    \mtt{:rule}\ s'\
+			    \maybe{\mtt{:premises}\ {\vec φ}}\
+			    \maybe{\mtt{:args}\ {\vec e}} }      \\
+			    % {∣} & \prn{\mtt{step-pop}\ s\ \maybe{e}\
+			    % \prn{\mtt{:rule}\ {s_r}}\
+			    % \maybe{\mtt{:premises}\ {\vec φ}}\
+			    % \maybe{\mtt{:args}\ {\vec e}} }
 		    \end{array}
 		  & \mcomment{(proof commands)}
 	\end{array}}
