@@ -26,7 +26,7 @@ In particular, we define sets of expressions
 for \emph{terms}, \emph{parameters}, and \emph{attributes}.
 %
 Each term is either a symbol $s$ or an \emph{application}
-$\eoapp{s}{\vec t}$ for some list of terms $\vec t$.
+$\eapp{s}{\vec t}$ for some list of terms $\vec t$.
 %
 % TODO. ref to explanation of variable attributes.
 Let $ν$ and $α$ range over \emph{variable attributes}
@@ -40,9 +40,9 @@ Finally, the rules of \autoref{fig:eo-syntax}
 define syntax for a subset of Eunoia's top-level commands,
 which we will call \emph{standard commands}.
 %
-Hereinafter, a list $Δ$ of standard commands is a
-\emph{signature}, and a list of parameters $Γ$
-is a \emph{context}.
+Hereinafter, a Eunoia \emph{signature} is a list of
+standard commands. We define some terminology and notation
+below for working with signatures.
 
 \subsubsection{Constant Declaration.}
 %
@@ -66,17 +66,22 @@ If $δ ∈ Δ$, we call $\prn{\vec ρ.\, t}$
 the \emph{definiens} of $s$;
 written $\prn{Δ ⊢ s ≔ \prn{\vec ρ.\, t}}$.
 %
-If the $\mtt{:type}$ attribute is given with term $t'$,
-then $\prn{Δ ⊢ s : t'}$ also holds.
+If the attribute $\mtt{:type}\ t'$ is given by $δ$,
+then $\prn{Δ ⊢ s : \prn{\vec ρ.\, t'}}$ also holds.
 
 \subsubsection{Program Declaration.}
 %
 Let $δ$ be a \emph{program declaration} with
-symbol $s$, consists of a
-variable $x$, a list of parameters $\vec ρ$,
-a \emph{signature} $(t_1, \ldots, t_n) → t'$,
-and rewrite clauses $r_1,\ldots,r_m$.
-
+symbol $s$, parameters $\vec ρ$,
+a \emph{type signature} given by
+the attribute $\mtt{:signature}\,\prn{\vec t}\,t'$,
+and \emph{cases} $\vec r$.
+%
+If $δ ∈ Δ$, we call the list of terms $\vec t$
+the \emph{domain} of $s$, and $t'$ the \emph{range}.
+%
+More formally, we write $\prn{Δ ⊢ \epar{\vec ρ.\,}}$.
+%
 \subsubsection{Signature Inclusion.}
 %
 

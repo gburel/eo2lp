@@ -5,7 +5,7 @@
 \newcommand{\mtt}[1]{{\color{MaterialPink500}{\texttt{#1}}}}
 \newcommand{\ptn}[1]{{\color{MaterialPurple500}{\texttt{#1}}}}
 \newcommand{\mcomment}[1]{{\color{MaterialIndigo500}{\text{#1}}}}
-\newcommand{\wrapp}[4]{ {\color{#1}{#2}}{#4}{\color{#1}{#3}}}
+\newcommand{\wrapp}[4]{{\color{#1}{#2}}{#4}{\color{#1}{#3}}}
 \newcommand{\prn}[1]{\wrapp{MaterialGrey600}{\lparen}{\rparen}{#1}}
 
 \newcommand{\cvc}[1]{\textsc{cvc{#1}}}
@@ -47,10 +47,14 @@
 
 % -------------- Eunoia ------------------------------------
 % eunoia symbols
+%
+\newcommand{\epar}[1]{\wrapp{MaterialGrey600}{\texttt{(}}{\texttt{)}}{#1}}
+\newcommand{\eapp}[2]{\epar{#1\ #2}}
+
 \newcommand{\eo}{\msf{eo}}
 \newcommand{\sym}[1]{\msf{s}_{\msf{#1}}}
-\newcommand{\eoapp}[2]{\prn{#1\ #2}}
-
+% \newcommand{\eoapp}[2]{\prn{#1\ #2}}
+% \newcommand{\earr}[1]{\mtt{#1}}
 \newcommand{\ctyp}{\mbf{ctyp}}
 \newcommand{\att}{\mbf{att}}
 
@@ -62,8 +66,8 @@
 \newcommand{\eoTermSyntax}{
 	\begin{array}[t]{r@{\ }l@{\quad}l@{\qquad}r@{\ }l@{\quad}l}
 		%!----------------------------------------!%
-		t & {⦂}\ s \mid \prn{{s}\,\many{t}}  & \mcomment{(terms)}      &
-		ρ & {⦂}\ \prn{s\ t\ \maybe{ν}}\qquad & \mcomment{(parameters)}   \\[1mm]
+		t & {⦂}\ s \mid \eapp{s}{\vec t} & \mcomment{(terms)}      &
+		ρ & {⦂}\ \epar{s\ t\ \maybe{ν}}  & \mcomment{(parameters)}   \\[1mm]
 	\end{array}
 }
 
@@ -78,22 +82,27 @@
 
 \newcommand{\eoCommandSyntax}{
 	\begin{array}[t]{r@{\ }l@{\quad}l}
+		r & \begin{array}[t]{c@{\ }l}
+			    {⦂} & \epar{t\ t'}
+		    \end{array}
+		  & \mcomment{(term pairs)}
+		\\
 		δ & \begin{array}[t]{c@{\ }l}
-			    {⦂} & \prn{\mtt{declare-const}\ s\ t\ \maybe{α}}                              \\
-			    {∣} & \prn{\mtt{declare-parameterized-const}\ s\ \prn{\vec{ρ}}\ t\ \maybe{α}} \\
-			    {∣} & \prn{\mtt{define}\ {s} \ \prn{\vec ρ} \ t\ \ \maybe{\mtt{:type}\,t'}}   \\
-			    {∣} & \prn{\mtt{program}\ {s} \ \prn{\vec ρ}\
-				    \mtt{:signature}\,\prn{\vec{t}}\,t'\
-				    \prn{\many{\prn{t_{l}\ t_{r}}}}
-			    }                                                                             \\
-			    {∣} & {\color{MaterialGrey600}{\lparen}}
-			    \mtt{declare-rule}\ s\ \prn{\vec ρ}\
-			    \\ & \quad \maybe{\mtt{:premises}\ \prn{\vec{t}_{\text{prems}}}}\
-			    \\ & \quad \maybe{\mtt{:args}\ \prn{\vec{t}_{\text{args}}}}\
-			    \\ & \quad \maybe{\mtt{:requires}\ \prn{\many{\prn{t_l\ t_r'}}}}\
+			    {⦂} & \epar{\mtt{declare-const}\ s\ t\ \maybe{α}}                               \\
+			    {∣} & \epar{\mtt{declare-parameterized-const}\ s\ \epar{\vec{ρ}}\ t\ \maybe{α}} \\
+			    {∣} & \epar{\mtt{define}\ {s} \ \epar{\vec ρ} \ t\ \ \maybe{\mtt{:type}\,t'}}   \\
+			    {∣} & \epar{\mtt{program}\ {s} \ \epar{\vec ρ}\
+			    \mtt{:signature}\,\epar{\vec{t}}\,t'\
+			    \epar{\vec{r}}
+			    }                                                                               \\
+			    {∣} & {\color{MaterialGrey600}{\texttt{(}}}
+			    \mtt{declare-rule}\ s\ \epar{\vec ρ}\
+			    \\ & \quad \maybe{\mtt{:premises}\ \epar{\vec{t}_{\text{prem}}}}\
+			    \\ & \quad \maybe{\mtt{:args}\ \epar{\vec{t}_{\text{args}}}}\
+			    \\ & \quad \maybe{\mtt{:requires}\ \epar{\vec{r}}}\
 			    \\ & \quad \mtt{:conclusion}\ {t_{\text{conc}}}
-			    {\color{MaterialGrey600}{\rparen}}                                            \\
-			    {∣} & \prn{\mtt{include}\ μ}                                                  \\
+			    {\color{MaterialGrey600}{\texttt{)}}}                                           \\
+			    {∣} & \epar{\mtt{include}\ μ}                                                   \\
 		    \end{array}
 		  & \mcomment{(std. commands)}
 	\end{array}
@@ -102,12 +111,12 @@
 \newcommand{\eoPrfCommandSyntax}{
 	\begin{array}[t]{r@{\ }l@{\quad}l}
 		π & \begin{array}[t]{c@{\ }l}{⦂}
-			        & \prn{\mtt{assume}\ s\ e}       \\
+			        & \epar{\mtt{assume}\ s\ e}       \\
 			    % {∣} & \prn{\mtt{assume-push}\ s\ e}      \\
-			    {∣} & \prn{\mtt{step}\ s\ \maybe{e}\
+			    {∣} & \epar{\mtt{step}\ s\ \maybe{e}\
 			    \mtt{:rule}\ s'\
 			    \maybe{\mtt{:premises}\ {\vec φ}}\
-			    \maybe{\mtt{:args}\ {\vec e}} }      \\
+			    \maybe{\mtt{:args}\ {\vec e}} }       \\
 			    % {∣} & \prn{\mtt{step-pop}\ s\ \maybe{e}\
 			    % \prn{\mtt{:rule}\ {s_r}}\
 			    % \maybe{\mtt{:premises}\ {\vec φ}}\
