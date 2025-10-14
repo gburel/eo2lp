@@ -1,19 +1,19 @@
 - section 1:
+  - Eunoia,
+  - SMT-LIB 3,
+  - cvc5, CPC
+  - lambdapi/dedukti.
   - SMT-LIB. 2.6., 2.7.,
     3.0: proposal, Barrett, Chad Brown,
     Eunoia.
-
-
-
   - cvc5.
   - Alethe.
-      fixed set of rules.
-      Hans-Jorg
-      Alessio.
+      CITE. Alethe specification, surrounding papers
   - LFSC.
       old and ugly.
       ad-hoc side conditions ???
   - LambdaPi.
+      CITE. Alessio's work on lambdapi output for Carcara.
       cite successful and ongoing translation projects.
       why3. current interface for ATP in lambdapi is untrusted/orcale.
 
@@ -24,7 +24,7 @@
   - discussion of CPC as a Eunoia signature
   - example of cvc5 proof using cpc rules
 
-- section 3:
+- section 4: "results"
   - term/type-level translation
   - top-level translation.
     - (parameterized) consts. easy
@@ -33,8 +33,7 @@
     - declare-rule
     - include
   - assume, step
-
-- section 4: "results"
+  - definition of term level trans
   - rodin proof benchmarks.
   - cpc-mini.
     - `program-schema`.
