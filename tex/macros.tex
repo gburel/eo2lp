@@ -10,6 +10,7 @@
 
 \newcommand{\cvc}[1]{\textsc{cvc{#1}}}
 \newcommand{\verit}{\textsc{veriT}}
+
 % ----- abstract syntax ----------
 % plurality, binding
 \newcommand{\plur}[2]{{#1}_{1}\ldots{#1}_{#2}}
@@ -47,9 +48,9 @@
 
 % -------------- Eunoia ------------------------------------
 % eunoia symbols
-%
 \newcommand{\epar}[1]{\wrapp{MaterialGrey600}{\texttt{(}}{\texttt{)}}{#1}}
 \newcommand{\eapp}[2]{\epar{#1\ #2}}
+\newcommand{\earr}[1]{\epar{\mtt{->}\ #1}}
 
 \newcommand{\eo}{\msf{eo}}
 \newcommand{\sym}[1]{\msf{s}_{\msf{#1}}}
@@ -58,6 +59,8 @@
 \newcommand{\ctyp}{\mbf{ctyp}}
 \newcommand{\att}{\mbf{att}}
 
+\newcommand{\hyp}{\mbf{hyp}}
+\newcommand{\step}{\mbf{step}}
 
 % --- figures for `eoas.tex` ------------------------------
 % s & {⦂}\ \sym 0 ∣ \sym 1 ∣ \ldots
@@ -111,12 +114,12 @@
 \newcommand{\eoPrfCommandSyntax}{
 	\begin{array}[t]{r@{\ }l@{\quad}l}
 		π & \begin{array}[t]{c@{\ }l}{⦂}
-			        & \epar{\mtt{assume}\ s\ e}       \\
+			        & \epar{\mtt{assume}\ s\ φ}       \\
 			    % {∣} & \prn{\mtt{assume-push}\ s\ e}      \\
-			    {∣} & \epar{\mtt{step}\ s\ \maybe{e}\
-			    \mtt{:rule}\ s'\
-			    \maybe{\mtt{:premises}\ {\vec φ}}\
-			    \maybe{\mtt{:args}\ {\vec e}} }       \\
+			    {∣} & \epar{\mtt{step}\ s\ φ\
+			    \some{\mtt{:rule}\ s'}\
+			    \maybe{\mtt{:premises}\ {\vec ψ}}\
+			    \maybe{\mtt{:args}\ {\vec t}}}\\
 			    % {∣} & \prn{\mtt{step-pop}\ s\ \maybe{e}\
 			    % \prn{\mtt{:rule}\ {s_r}}\
 			    % \maybe{\mtt{:premises}\ {\vec φ}}\

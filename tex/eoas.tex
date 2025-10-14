@@ -40,9 +40,9 @@ Finally, the rules of \autoref{fig:eo-syntax}
 define syntax for a subset of Eunoia's top-level commands,
 which we will call \emph{standard commands}.
 %
-Hereinafter, a Eunoia \emph{signature} is a list of
-standard commands. We define some terminology and notation
-below for working with signatures.
+Hereinafter, a Eunoia \emph{signature} is a list $Δ$
+of standard commands. We define some
+`abstract syntax' for working with signatures below.
 
 \subsubsection{Constant Declaration.}
 %
@@ -73,34 +73,81 @@ then $\prn{Δ ⊢ s : \prn{\vec ρ.\, t'}}$ also holds.
 %
 Let $δ$ be a \emph{program declaration} with
 symbol $s$, parameters $\vec ρ$,
-a \emph{type signature} given by
-the attribute $\mtt{:signature}\,\prn{\vec t}\,t'$,
-and \emph{cases} $\vec r$.
+attribute $\mtt{:signature}\,\prn{\vec t}\,t'$,
+and term-pairs $\vec r$.
 %
-If $δ ∈ Δ$, we call the list of terms $\vec t$
-the \emph{domain} of $s$, and $t'$ the \emph{range}.
+If $δ ∈ Δ$ and $\vec t = \plur t n$,
+we say that $s$ has \emph{domain} $(\plurcomma t n)$,
+\emph{range} $t'$ and \emph{cases} $\vec r$
+with respect to the parameters $\vec ρ$.
 %
-More formally, we write $\prn{Δ ⊢ \epar{\vec ρ.\,\ldots}}$.
+More formally, we write
+  $\prn{Δ ⊢ s : \prn{\vec ρ.\,\earr{\plur t n\, t'}}}$
+for the type of $s$,
+and
+  $\prn{Δ ⊢ s ≔ \mbf{cases}(\vec ρ.\ r_1, \ldots, r_n)}$
+for the cases.
 %
-\subsubsection{Signature Inclusion.}
-%
-
 \subsubsection{Rule Declaration.}
 %
-A \emph{rule declaration} consists of a variable $x$,
-a list of parameters $\vec ρ$,
-a list of terms $\plur φ n$ called \emph{premises},
-a list of terms $t_1, \ldots, t_n$ called \emph{argument patterns},
-and a \emph{conclusion} $ψ$.
-
-\subsubsection{Proof Scripts.}
+Let $δ$ be a \emph{rule declaration} with symbol $s$,
+parameters $\vec ρ$, and \emph{conclusion} $ψ$.
 %
-A Eunoia \emph{proof script} is a list of
-commands of the form $\vec δ, \vec π$ proof commands.
+Suppose also that $δ$ provides attributes
+$\mtt{:premises}\ \epar{\vec φ}$,
+$\mtt{:args}\ \epar{\vec t}$,
+and $\mtt{:requires}\ \epar{\vec r}$.
+%
+If $δ ∈ Δ$, then we may write:
+  $$Δ ⊢ s : \prn{\vec ρ.\ \mbf{infer}(ψ ∣ \vec φ, \vec t, \vec r)}$$
 
 
-\subsection{The Co-operating Proof Calculus}
-\label{sec:eo-proof}
+\subsubsection{Signature Inclusion.}
+%
+We assume a \emph{(global) environment}
+$Θ$ which maps filepaths to Eunoia signatures.
+%
+Thus, whenever $\epar{\mtt{include}\ μ} ∈ Δ$
+for some path $μ$, the signature $Δ$ inherits
+all of the declarations made by $Θ(μ)$.
+
+
+\subsection{Elaboration of Eunoia Terms}
+
+\subsection{Proof Scripts}
+%
+\begin{boxfigure}[t!]{fig:eo-prf-commands}
+ {Syntax for Eunoia proof commands.}
+ $$ \eoPrfCommandSyntax $$
+\end{boxfigure}
+%
+\Autoref{fig:eo-prf-commands} provides syntax for two
+basic forms of Eunoia \emph{proof commands}, which are
+called  \emph{assumption} and \emph{step}.
+%
+Each \emph{proof script} $Π$ is a list
+$\prn{\vec δ; \vec π}$ where
+$\vec δ$ is a list of standard commands called
+the \emph{preamble} and $\vec π$ are proof commands.
+%
+
+Given $\epar{\mtt{assume}\ s\ t} ∈ Π$,
+we write $\prn{Π ⊢ s ≔ \hyp(t)}$.
+%
+Furthermore, let $π$ be a proof step with symbol $s$,
+\emph{conclusion} $ψ$, and attributes $\mtt{:premises}\ \vec{φ}$
+and $\mtt{:args}\ \vec{t}$.
+%
+Then we may write $\prn{Π ⊢ s ≔ \step(s', φ, \vec ψ, \vec t)}$
+iff $π ∈ Π$.
+% In practice, an Eunoia-friendly SMT solver will give
+% its proofs with respect to some fixed signature $Δ$.
+%
+% We define We say that a proof scripts is \emph{valid} with respect
+% to $Δ$ iff a list of
+% commands of the form $\vec δ, \vec π$ proof commands.
+
+
 
 \end{document}
 
