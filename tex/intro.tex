@@ -15,10 +15,26 @@ within a curated selection of mathematical theories~\cite{Barrett2021}.
 % a solver can vary, meaning that different solvers
 % will excel in different theories.
 %
+Such tools (known as SMT \emph{solvers}) are increasingly used as
+back-ends for various tasks, in particular for hardware verification
+\cite{DBLP:conf/fmcad/MattareiMBDHH18}, for program verification
+\cite{barnett06boogie,riant23debugging,kosmatov16frama-c}, for model
+checking \cite{DBLP:conf/cav/ChampionMST16}, to increase automation in
+proof assistants
+\cite{DBLP:conf/cpp/ArmandFGKTW11,DBLP:journals/jar/BlanchetteBP13},
+and to check the security of access policies \cite{Backes2018}. Most
+of theses applications require a high level of confidence in the
+answers produced by the solver. For this purpose, the specification of
+the proof system of the solvers needs to be clearly formalized, and
+one should be able to check their output using trusted tools.
+
+
+
+
 Towards the aim of standardizing and benchmarking
-such tools (known as SMT \emph{solvers}),
-the \emph{SMT library initivate} oversee the development of
-the \emph{SMT-LIB standard}.
+ SMT solvers,
+the \emph{SMT library initiative} oversee the development of
+the \emph{SMT-LIB standard} \cite{Barrett2015-standard}.
 %
 The standard specifies a common language used
 for interacting with solvers, including a detailed
@@ -50,26 +66,95 @@ Proof generation is however not covered by the SMT-LIB
 standard, which has led to the development of various proof
 formats for SMT solvers.
 %%
-In particular, the \emph{Alethe} format draws from
-a fixed set of rules designed to reflect the
-reasoning mechanisms of SMT solvers.
+One of the first attempt to output proofs was done by the solver CVC3
+and its successors. They can produce proofs in the LFSC format
+\cite{DBLP:journals/fmsd/StumpORHT13}. LFSC extends the Edinburgh
+Logical Framework (LF) with side conditions, programs that are
+executed to restrict applications of some inference rules. However,
+several proof rules of CVC5 are not supported by this back-end, and
+such steps are given as axioms and need to be checked. Another
+limitation is that the rules that are used are specific to CVC5, and
+do not necessarily exists in this form in other solvers.
+%
+This need for a more interoperable proof format lead to design of the
+\emph{Alethe} format \cite{schurrAletheGenericSMT2021}.  Alethe draws from a fixed set of rules designed
+to reflect the reasoning mechanisms of SMT solvers.
 %
 The common proof interface provided by Alethe has
 enabled interoperability between solvers and other
 automated reasoning tools;
-particularly \emph{proof assistants}.
+particularly \emph{proof assistants}, where it is used for the
+reconstruction of
+proofs obtain automatically
+\cite{DBLP:conf/cpp/ArmandFGKTW11,DBLP:conf/cade/SchurrFD21}. Among solvers
+that output proofs
+in the Alethe format, one can cite VeriT
+\cite{DBLP:conf/cade/BoutonODF09} and CVC5 \cite{Barbosa2022}.
 %
+Proofs in the Alethe format can be checked by the tool
+\textit{Carcara} \cite{andreottiCarcaraEfficientProof2023}.
 Unfortunately, long-term interoperability can be
 challenging, as developers must rewrite aspects
 of their tools to maintain parity with the evolving
-Alethe specification.
+Alethe specification. Furthermore, from the  point of view of the developer of a
+solver, the fixed set of available inference rules of Alethe hinders
+the design of new reasoning techniques.
 %
-\textit{Eunoia} is a logical framework that allows formalizing
+\textit{Eunoia} was proposed to tackle these issues. \textit{Eunoia} is a logical framework that allows formalizing
 the inference rules used by the proof production facilities
-of an SMT solver.
+of an SMT solver. Eunoia shares aspects with the speculative proposal
+for SMT-LIB 3~\cite{smt3-proposal}: it uses e.g.\ dependent types and binders.
 %
-\textit{Ethos} is a C++ tool for verifying proofs in the
-Eunoia format.
+Proofs in the
+Eunoia format can be checked by the C++ tool
+\textit{Ethos}~\cite{EthosUser_manualmdMain}. Eunoia and Ethos are
+work in progress, and they are consequently still evolving.
+CVC5 can output proofs in the Eunoia format. For this purpose, an
+encoding of the proof calculus of CVC5, namely the Cooperating Proof
+Calculus (CPC), has been implemented in Eunoia. Using this, proofs of
+CVC5 can be checked by Ethos.
+
+
+
+Carcara and Ethos are relatively small tools, so that their source can
+be inspected to persuade oneself of their correction. However, one
+could want to go a step further to gain another level of trust, by
+translating proofs in Alethe or Eunoia format into formats that are
+more mature, for instance the format of proof assistants such as Rocq
+or Isabelle/HOL. Such a translation could also help with reusing the
+proofs in another context, in an interoperability perspective. The
+$\lambda\Pi$-calculus modulo rewriting~\cite{CousineauDowek}, as
+implemented in the tools Dedukti~\cite{assaf2023dedukti} and
+LambdaPi~\cite{hondet:hal-02981561}, was designed to offer a
+trustworthy proof checker with an emphasis on interoperability of
+proof systems. Proofs from various systems can be embedded into
+Dedukti: proofs assistants such as Rocq, Isabelle, HOL Light, Matita
+and Lean; automated theorem provers such as Zenon Modulo, ArchSAT and
+Vampire, and more generally any prover outputting proofs in the TPTP
+format; and even the programming language semantic framework
+K. Conversely, some proofs in Dedukti can be exported back into Rocq,
+Matita, or HOL/Light~\cite{DBLP:journals/corr/abs-1807-01873}. Such a formalism seems therefore a prime target
+for translating proofs of SMT solvers.
+Coltellacci~\cite{coltellacciReconstructionSMTProofs2024a} developed a
+translation of Alethe proofs into LambdaPi, by adding a new back-end
+in the Carcara tool. Roughly, to each inference rule of the Alethe
+specification corresponds a lemma in LambdaPi, and lemmas are combined
+to reconstruct the proof.
+
+As Eunoia is a logical framework, the set of rules is not fixed and
+cannot be implemented once for all in LambdaPi. To be
+able to translate Eunoia proofs into Dedukti or LambdaPi, one need a
+way to encode also how inference rules are defined in Eunoia, in order
+to be as generic as it. This is the purpose of this paper, together
+with the actual translation of SMT proofs from CVC5 into LambdaPi.
+
+In the next section, we present Eunoia, Ethos and
+CPC. Section~\ref{sec:lambdapi} defines the $\lambda\Pi$-calculus
+modulo rewriting and its implementation in LambdaPi. The translation
+from Eunoia to LambdaPi is given in Section~\ref{sec:results}, as well
+as actual results. We conclude in Section~\ref{sec:conclu} and discuss
+future work.
+
 
 % % eunoia is (similar to)/(inspired by) by the speculative
 % % proposal for SMT-LIB 3.
