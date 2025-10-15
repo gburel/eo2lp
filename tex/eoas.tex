@@ -111,9 +111,140 @@ Thus, whenever $\epar{\mtt{include}\ μ} ∈ Δ$
 for some path $μ$, the signature $Δ$ inherits
 all of the declarations made by $Θ(μ)$.
 
+% ----------------------------------------------------------
+\subsection{Elaboration of Terms}
+%
+The meaning of an application $\eapp{s}{\vec t}$
+depends on the constant attribute of $s$.
+%
+For example, consider a signature $Δ$ containing
+the following constant declaration:
+$$\dca{\eor}{\earr{\bool\ \bool\ \bool}}{\rcn \false}$$
+%
+The type of $\eor$ is declared to be
+${\earr{\bool\ \bool\ \bool}}$,
+and so we may expect that its only valid
+uses are of the form $\eapp{\eor}{t_1\ t_2}$
+for some terms $t_1$, $t_2$.
+%
+However, the assignment of the constant attribute means
+that the $\mtt{or}$ symbol is treated as
+\emph{right-associative} with \emph{nil-terminator} $\false$.
+%
+Thus, $n$-ary applications of $\eor$ will
+be \emph{elaborated} to a normal form, e.g.;
+%
+$$\eapp{\eor}{\ev x\ \ev y\ \ev z}\ ⇢\
+  \eapp{\eor}{\ev x\ \eapp{\eor}{\ev y\ \eapp{\eor}{\ev z\ \false}}}$$
+%
+Moreover, the normal form of an $n$-ary applications may
+depend upon the attributes of `locally bound' symbols.
+For example, consider $\vec ρ$ containing
+$\epar{\ev x\ \bool}$,
+$\epar{\ev y\ \bool\ \mtt{:list}}$,
+and $\epar{\ev z\ \bool}$.
+%
+Then, $\eapp{\eor}{\ev x\ \ev y\ \ev z}$ will be
+elaborated as follows:
+$$
+\eapp{\eor}{\ev x\ \ev y\ \ev z}
+\ {⇢}
+\ \econs\eor{\ev x}{
+\econcat{\eor}{\ev y}{\eapp{\eor}{\ev z\ \false}}
+}
+$$
+%
+The $\mtt{:list}$ attribute alters the elaboration strategy
+under the assumption that $\ev y$ will (eventually) be
+substituted for some $\eor$-list.
+%
+For example, consider the result of substituting
+$\ev y ↦ \econs\eor{\ev w}{\false}$
+thus:
+$$
+\begin{array}[t]{c}
+\econs\eor{\ev x}{
+\econcat{\eor}{\econs\eor{\ev w}{\false}}
+  {\eapp{\eor}{\ev z\ \false}}}
+\\[1mm] {⇣} \\[1mm]
+  \econs\eor{\ev x}{
+  \econs\eor{\ev w}{
+    \econs\eor{\ev z}{\false}}
+  }
+\end{array}
+$$
+%
+To support the variety of elaboration strategies
+corresponding to the different constant attributes,
+we define an \emph{elaboration} operator below.
+%
+\begin{definition}
+For any symbol $f$ and list of parameters $\vec ρ$,
+let $\glue{\vec ρ,f}$ be the binary operator
+such that for any terms $t_1$, $t_2$, the following holds:
+%
+$$
+\glue{\vec ρ,f}[t_1,t_2] =
+\begin{cases}
+  \econcat{f}{t_1}{t_2} & \text{if $Γ ⊢ t_1 ∷ \mtt{:list}$,}
+  \\
+  \econs{f}{t_1}{t_2} & \text{otherwise.}
+\end{cases}
+$$
+%
+Then for any signature $Δ$, let $\elab{Δ,\vec ρ}$
+be the least (unary) operator such that for any
+symbol $f$ and terms $\vec t = \plur t n$,
+the following holds:
+$$
+\begin{array}[t]{r@{\ =\ }l}
+  \elab{Δ,\vec ρ}[f] & f
+  \\
+  \elab{Δ,\vec ρ}[\eapp{f}{\vec t}]
+  &
+  \begin{cases}
+    \foldr(G, t_\nil, \vec t)
+    & \text{if $Δ ⊢ f ∷ \rcn{t_\nil}$, }
+    \\
+    \foldl(G', t_\nil, \vec t)
+    & \text{if $Δ ⊢ f ∷ \lcn{t_\nil}$,}
+    \\
+    \foldr(G, t_n, \plur t {n-1})
+    &
+    \text{if $Δ ⊢ f ∷ \rc$,}
+    \\
+    \foldl(G', t_n, \plur t {n-1})
+    &
+    \text{if $Δ ⊢ f ∷ \lc$,}
+    \\
+    \eapp{f}{{t_1'}\ldots{t_n'}}
+    &
+    \text{otherwise.}
+    % \econs{f}{t_1}{t_2} & \text{otherwise.}
+  \end{cases}
+\end{array}
+$$
+where $G ≔ \glue{\vec ρ, f}[x,y]$,
+and $G'(x,y) ≔ G(y,x)$,
+and $t_i' ≔ \elab{Δ, \vec ρ}[t_i]$.
+% for $1 ≤ i ≤ n$.
 
-\subsection{Elaboration of Eunoia Terms}
+\end{definition}
+%
 
+
+
+
+
+
+
+
+
+
+
+
+
+% ----------------------------------------------------------
 \subsection{Proof Scripts}
 %
 \begin{boxfigure}[t!]{fig:eo-prf-commands}
