@@ -76,8 +76,8 @@ such steps are given as axioms and need to be checked. Another
 limitation is that the rules that are used are specific to CVC5, and
 do not necessarily exists in this form in other solvers.
 %
-This need for a more interoperable proof format lead to design of the
-\emph{Alethe} format \cite{schurrAletheGenericSMT2021}.  Alethe draws from a fixed set of rules designed
+This need for a more interoperable proof format lead to the design of the
+\emph{Alethe} format~\cite{schurrAletheGenericSMT2021}.  Alethe draws from a fixed set of rules designed
 to reflect the reasoning mechanisms of SMT solvers.
 %
 The common proof interface provided by Alethe has
@@ -85,13 +85,13 @@ enabled interoperability between solvers and other
 automated reasoning tools;
 particularly \emph{proof assistants}, where it is used for the
 reconstruction of
-proofs obtain automatically
+proofs obtained automatically
 \cite{DBLP:conf/cpp/ArmandFGKTW11,DBLP:conf/cade/SchurrFD21}. Among solvers
 that output proofs
 in the Alethe format, one can cite VeriT
 \cite{DBLP:conf/cade/BoutonODF09} and CVC5 \cite{Barbosa2022}.
 %
-Proofs in the Alethe format can be checked by the tool
+Proofs in the Alethe format can be checked by the standalone tool
 \textit{Carcara} \cite{andreottiCarcaraEfficientProof2023}.
 Unfortunately, long-term interoperability can be
 challenging, as developers must rewrite aspects
@@ -128,11 +128,13 @@ implemented in the tools Dedukti~\cite{assaf2023dedukti} and
 LambdaPi~\cite{hondet:hal-02981561}, was designed to offer a
 trustworthy proof checker with an emphasis on interoperability of
 proof systems. Proofs from various systems can be embedded into
-Dedukti: proofs assistants such as Rocq, Isabelle, HOL Light, Matita
-and Lean; automated theorem provers such as Zenon Modulo, ArchSAT and
-Vampire, and more generally any prover outputting proofs in the TPTP
-format; and even the programming language semantic framework
-K. Conversely, some proofs in Dedukti can be exported back into Rocq,
+Dedukti: proofs assistants such as Rocq~\cite{boespflug12coqine},
+Isabelle~\cite{isabelle_dedukti}, HOL Light~\cite{assaf15translating},
+Matita~\cite{krajono} and Lean~\cite{vaishnav25lean4less}; automated
+theorem provers such as Zenon Modulo, iProverModulo~\cite{burel20first} and ArchSAT~\cite{bury:tel-02612985} and
+Vampire~\cite{komel2025case}, and more generally any prover outputting proofs in the TPTP
+format~\cite{DBLP:conf/flairs/SutcliffeBB25}; and even the programming language semantic framework
+\(\mathbb K\)~\cite{DBLP:conf/types/LedeinBD22}. Conversely, some proofs in Dedukti can be exported back into Rocq,
 Matita, or HOL/Light~\cite{DBLP:journals/corr/abs-1807-01873}. Such a formalism seems therefore a prime target
 for translating proofs of SMT solvers.
 Coltellacci~\cite{coltellacciReconstructionSMTProofs2024a} developed a
