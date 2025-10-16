@@ -3,19 +3,18 @@
 \input{preamble.tex}
 \input{macros.tex}
 
-
 \begin{document}
 % ---------------------------------------------------------
 \begin{boxfigure}[t!]{fig:eo-syntax}
-	{Syntax for Eunoia}
+	{Syntax for Eunoia: terms, attributes, and commands.}
 	%
 	$$ \eoTermSyntax $$
 	\hrule
 	$$ \eoAttrSyntax $$
 	\hrule
 	$$ \eoCommandSyntax $$
-	% \hrule
-	% $$ \eoPrfCommandSyntax $$
+	\hrule
+	$$ \eoPrfCommandSyntax $$
 \end{boxfigure}
 % ---------------------------------------------------------
 With respect to a fixed set $𝒮_{\mbf{eo}}$ of \emph{symbols},
@@ -49,9 +48,9 @@ of standard commands. We define some
 Let $δ$ be a \emph{(parameterized) constant declaration}
 with symbol $s$, parameters $\vec ρ$, and term $t$.
 %
-If $δ ∈ Δ$, then $\prn{\vec ρ.\, t}$ is called the
-\emph{type} of $s$;
-written $\prn{Δ ⊢ s : \prn{\vec ρ.\, t}}$.
+If $δ ∈ Δ$, then $\prn{t}$ is the
+\emph{type} of $s$ wrt. $\vec ρ$;
+written $\prn{Δ ⊢ s(\vec ρ) : t}$.
 %
 If $δ$ provides a constant attribute $α$,
 we write $\prn{Δ ⊢ s ∷ α}$.
@@ -62,12 +61,12 @@ we write $\prn{Δ ⊢ s ∷ α}$.
 Let $δ$ be a \emph{macro definition} with
 symbol $s$, parameters $\vec ρ$, and term $t$.
 %
-If $δ ∈ Δ$, we call $\prn{\vec ρ.\, t}$
-the \emph{definiens} of $s$;
-written $\prn{Δ ⊢ s ≔ \prn{\vec ρ.\, t}}$.
+If $δ ∈ Δ$, then $t$ is the \emph{definiens} of $s$
+wrt. $\vec ρ$;
+written $\prn{Δ ⊢ s(\vec ρ) ≔ t}$.
 %
 If the attribute $\mtt{:type}\ t'$ is given by $δ$,
-then $\prn{Δ ⊢ s : \prn{\vec ρ.\, t'}}$ also holds.
+then $\prn{Δ ⊢ s(\vec ρ) : t'}$ also holds.
 
 \subsubsection{Program Declaration.}
 %
@@ -76,19 +75,23 @@ symbol $s$, parameters $\vec ρ$,
 attribute $\mtt{:signature}\,\prn{\vec t}\,t'$,
 and term-pairs $\vec r$.
 %
-If $δ ∈ Δ$ and $\vec t = \plur t n$,
-we say that $s$ has \emph{domain} $(\plurcomma t n)$,
-\emph{range} $t'$ and \emph{cases} $\vec r$
-with respect to the parameters $\vec ρ$.
+Let $\vec t = \plur t n$ and $\vec r = \plur r m$,
+and $δ ∈ Δ$. Then, we say that $s$ has \emph{domain}
+$(\plurcomma t n)$, \emph{range} $t'$ and
+\emph{cases} $\vec r$ with respect to $\vec ρ$.
 %
-More formally, we write
-  $\prn{Δ ⊢ s : \prn{\vec ρ.\,\earr{\plur t n\, t'}}}$
-for the type of $s$,
-and
-  $\prn{Δ ⊢ s ≔ \mbf{cases}(\vec ρ.\ r_1, \ldots, r_n)}$
-for the cases.
+More formally, we may write:
+  $$
+  Δ ⊢ s(\vec ρ) : \earr{\plur t n\, t'}
+\quad\text{and}\quad
+  Δ ⊢ s(\vec ρ) ≔ \mbf{cases}(r_1, \ldots, r_m)
+  $$
+% for the type of $s$,
+% and
+%   $$
+% for the cases.
 %
-\subsubsection{Rule Declaration.}
+\subsubsection{Inference Rule Declaration.}
 %
 Let $δ$ be a \emph{rule declaration} with symbol $s$,
 parameters $\vec ρ$, and \emph{conclusion} $ψ$.
@@ -99,7 +102,7 @@ $\mtt{:args}\ \epar{\vec t}$,
 and $\mtt{:requires}\ \epar{\vec r}$.
 %
 If $δ ∈ Δ$, then we may write:
-  $$Δ ⊢ s : \prn{\vec ρ.\ \mbf{infer}(ψ ∣ \vec φ, \vec t, \vec r)}$$
+  $$Δ ⊢ s(\vec ρ) : \mbf{rule}(ψ ∣ \vec φ, \vec t, \vec r)$$
 
 
 \subsubsection{Signature Inclusion.}
@@ -110,6 +113,47 @@ $Θ$ which maps filepaths to Eunoia signatures.
 Thus, whenever $\epar{\mtt{include}\ μ} ∈ Δ$
 for some path $μ$, the signature $Δ$ inherits
 all of the declarations made by $Θ(μ)$.
+
+\subsubsection{Proof Scripts.}
+
+Two basic forms of \emph{proof commands} are given,
+which are called \emph{assumption} and \emph{step}
+respectively.
+%
+In line with the Eunoia user manual, we make a distinction
+between standard Eunoia signatures and \emph{proof scripts}.
+%
+Each proof script $Π$ is a list $\prn{\vec δ; \vec π}$
+where $\vec δ$ is a list of standard commands called
+the \emph{preamble} and $\vec π$ are proof commands.
+%
+In practice, an Eunoia-friendly SMT solver will
+output proof scripts with respect to some fixed
+signature $Δ$.
+%
+
+Given $π = \epar{\mtt{assume}\ s\ φ}$ or
+$π = \epar{\mtt{step}\ s\ φ\ \ldots}$, we call
+$s$ the \emph{name} and $φ$ the \emph{conclusion} of $π$.
+%
+In either case, we may write $\prn{Π ⊢ s : \prf(φ)}$
+whenever $π ∈ Π$.
+%
+Furthermore, if $π$ is a step with attributes
+$\mtt{:rule}\ s'$,
+$\mtt{:premises}\ \vec{ψ}$, and $\mtt{:args}\ \vec{t}$.
+then we may write
+$\prn{Π ⊢ s ≔ \step(s', \vec ψ, \vec t)}$.
+
+
+% iff $π ∈ Π$.
+
+%
+% We define We say that a proof scripts is \emph{valid} with respect
+% to $Δ$ iff a list of
+% commands of the form $\vec δ, \vec π$ proof commands.
+
+
 
 % ----------------------------------------------------------
 \subsection{Elaboration of Terms}
@@ -186,7 +230,7 @@ such that for any terms $t_1$, $t_2$, the following holds:
 $$
 \glue{\vec ρ,f}[t_1,t_2] =
 \begin{cases}
-  \econcat{f}{t_1}{t_2} & \text{if $Γ ⊢ t_1 ∷ \mtt{:list}$,}
+  \econcat{f}{t_1}{t_2} & \text{if $\vec ρ ⊢ t_1 ∷ \mtt{:list}$,}
   \\
   \econs{f}{t_1}{t_2} & \text{otherwise.}
 \end{cases}
@@ -199,27 +243,27 @@ the following holds:
 $$
 \begin{array}[t]{r@{\ =\ }l}
   \elab{Δ,\vec ρ}[f] & f
-  \\
+  \\[1mm]
   \elab{Δ,\vec ρ}[\eapp{f}{\vec t}]
   &
   \begin{cases}
-    \foldr(G, t_\nil, \vec t)
-    & \text{if $Δ ⊢ f ∷ \rcn{t_\nil}$, }
+    \foldr(G, t_\nil, \vec t')
+    & \tsm{if $Δ ⊢ f ∷ \rcn{t_\nil}$, }
     \\
-    \foldl(G', t_\nil, \vec t)
-    & \text{if $Δ ⊢ f ∷ \lcn{t_\nil}$,}
+    \foldl(G', t_\nil, \vec t')
+    & \tsm{if $Δ ⊢ f ∷ \lcn{t_\nil}$,}
     \\
-    \foldr(G, t_n, \plur t {n-1})
+    \foldr(G, t'_n, t'_1\ldots t'_{n-1})
     &
-    \text{if $Δ ⊢ f ∷ \rc$,}
+    \tsm{if $Δ ⊢ f ∷ \rc$,}
     \\
-    \foldl(G', t_n, \plur t {n-1})
+    \foldl(G', t'_1, t'_2\ldots t'_{n})
     &
-    \text{if $Δ ⊢ f ∷ \lc$,}
+    \tsm{if $Δ ⊢ f ∷ \lc$,}
     \\
     \eapp{f}{{t_1'}\ldots{t_n'}}
     &
-    \text{otherwise.}
+    \tsm{otherwise.}
     % \econs{f}{t_1}{t_2} & \text{otherwise.}
   \end{cases}
 \end{array}
@@ -245,39 +289,6 @@ and $t_i' ≔ \elab{Δ, \vec ρ}[t_i]$.
 
 
 % ----------------------------------------------------------
-\subsection{Proof Scripts}
-%
-\begin{boxfigure}[t!]{fig:eo-prf-commands}
- {Syntax for Eunoia proof commands.}
- $$ \eoPrfCommandSyntax $$
-\end{boxfigure}
-%
-\Autoref{fig:eo-prf-commands} provides syntax for two
-basic forms of Eunoia \emph{proof commands}, which are
-called  \emph{assumption} and \emph{step}.
-%
-Each \emph{proof script} $Π$ is a list
-$\prn{\vec δ; \vec π}$ where
-$\vec δ$ is a list of standard commands called
-the \emph{preamble} and $\vec π$ are proof commands.
-%
-
-Given $\epar{\mtt{assume}\ s\ t} ∈ Π$,
-we write $\prn{Π ⊢ s ≔ \hyp(t)}$.
-%
-Furthermore, let $π$ be a proof step with symbol $s$,
-\emph{conclusion} $ψ$, and attributes $\mtt{:premises}\ \vec{φ}$
-and $\mtt{:args}\ \vec{t}$.
-%
-Then we may write $\prn{Π ⊢ s ≔ \step(s', φ, \vec ψ, \vec t)}$
-iff $π ∈ Π$.
-% In practice, an Eunoia-friendly SMT solver will give
-% its proofs with respect to some fixed signature $Δ$.
-%
-% We define We say that a proof scripts is \emph{valid} with respect
-% to $Δ$ iff a list of
-% commands of the form $\vec δ, \vec π$ proof commands.
-
 
 
 \end{document}
