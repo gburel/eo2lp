@@ -1,0 +1,128 @@
+\documentclass[class=llncs, crop=false]{standalone}
+
+\input{preamble.tex}
+\input{macros.tex}
+
+\begin{document}
+% ------------------------
+Recall the definition of $\eunoia$ terms given by
+\autoref{sec:eunoia}, and similarly the definition
+for $\lambdapi$ terms from \autoref{sec:lambdapi}.
+%
+We define a pair of \emph{translation} operators below.
+%
+\begin{definition}
+For any $\eunoia$ symbol $s ∈ 𝒮_\eo$, define $\bar s$ thus:
+$$
+  \bar s =
+\begin{cases}
+  \esc s
+  & \text{if $s$ contains any of
+    $\{ \mtt{\$}, \mtt{@}, \ldots \}$,}
+  \\
+  {\ s}
+  & \text{otherwise.}
+\end{cases}
+$$
+\end{definition}
+%
+\begin{definition}
+%
+Let $\tm{⋅}$ be the least operator such that
+$\tm{s} = \bar s$ and:
+%
+$$
+\begin{array}[t]{r@{\ =\ }l}
+  \tm{\eapp{s}{\vec t}}
+  &
+  \begin{cases}
+    \tm{t_1} ⤳ \ldots ⤳ \ty{t_n}
+    &
+    \text{if $s = \prn{\mtt{->}}$,}
+  \\
+    \appldots{\bar s}{\tm{t_1}}{\tm{t_n}}
+    &
+    \text{otherwise.}
+\end{cases}
+\end{array}
+$$
+%
+Furthermore, let $\ty{⋅}$ be the least operator
+such that:
+$$
+\begin{array}[t]{r@{\ =\ }l}
+  \ty{s} &
+  \begin{cases}
+    \Set & \text{if $s = \mtt{Type}$,}
+  \\
+    \El{\tm{s}} & \text{otherwise.}
+  \end{cases}
+\\[5mm]
+  \ty{\eapp{s}{\vec t}}
+  &
+  \begin{cases}
+    \ty{t_1} → \ldots → \ty{t_n}
+    &
+    \text{if $s = \prn{\mtt{->}}$,}
+  \\
+    \El{\tm{\eapp{s}{\vec t}}}
+    &
+    \text{otherwise.}
+\end{cases}
+\end{array}
+$$
+%
+\end{definition}
+%
+Now, recall the set of $\eunoia$ commands,
+and also those of $\lambdapi$.
+%
+\begin{definition}
+Let $\cmd{⋅}$ be the least operator such that:
+%
+$$
+\begin{array}[t]{l@{\ =\ }l}
+\cmd{\epar{\mtt{declare-const}\ s\ t\ \maybe{α}}}
+& \mtt{symbol}\ {\bar s} : {\ty{t}};
+\\
+%-----------
+\cmd{\epar{\mtt{declare-parameterized-const}\ s\ \epar{\vec{ρ}}\ t\ \maybe{α}}}
+& \mtt{symbol}\ {\bar s}\ {\ctx{\vec ρ}}: {\ty{t}};\
+\\
+%-----------
+\cmd{\epar{\mtt{define}\ {s}\ \epar{\vec ρ} \ t\ \maybe{\mtt{:type}\ t'}}}
+& \mtt{symbol}\ {\bar s}\ {\ctx{\vec ρ}} : {\ty{t'}}
+  ≔ \tm{t};
+\\
+%-----------
+\cmd{
+\epar{\mtt{program}\ {s} \ \epar{\vec ρ}\
+			    \mtt{:signature}\,\epar{\vec{t}}\,t'
+				\
+			    \epar{\vec{r}}
+			}
+}
+& \mtt{symbol}\ {\bar s}\ {\ctx{\vec ρ}} : {\ty{\earr{\vec t\ t'}}};
+
+\end{array}
+$$
+$$
+\begin{array}[t]{c@{\ }l}
+			    {⦂} &                                \\
+			    {∣} &  \\
+			    {∣} &    \\
+			    {∣} &                                                                           \\
+			    {∣} & {\color{MaterialGrey600}{\texttt{(}}}
+			    \mtt{declare-rule}\ s\ \epar{\vec ρ}\
+			    \\ & \quad \maybe{\mtt{:premises}\ \epar{\vec{t}_{\text{prem}}}}\
+			    \\ & \quad \maybe{\mtt{:args}\ \epar{\vec{t}_{\text{args}}}}\
+			    \\ & \quad \maybe{\mtt{:requires}\ \epar{\vec{r}}}\
+			    \\ & \quad \mtt{:conclusion}\ {t_{\text{conc}}}
+			    {\color{MaterialGrey600}{\texttt{)}}}                                           \\
+			    {∣} & \epar{\mtt{include}\ μ}
+		    \end{array}
+$$
+
+\end{definition}
+
+\end{document}

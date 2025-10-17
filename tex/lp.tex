@@ -3,23 +3,23 @@
 \input{macros.tex}
 
 \begin{document}
-
+%
 \begin{boxfigure}[t!]{fig:lpTermSyntax}
-	{Syntax and typing rules for the $\lp$-calculus.}
+	{Syntax and typing rules for the $λΠ$-calculus.}
 	%
 	$$\lpTermSyntax$$
 	\hrule
-	$$\lpTypingRules$$
-	\hrule
 	$$ \lpWfRules $$
+	\hrule
+	$$\lpTypingRules$$
 	%
 \end{boxfigure}
 %
 \Autoref{fig:lpTermSyntax} provides abstract syntax
-for the \emph{$\lp$-calculus modulo rewriting}.
+for the \emph{$λΠ$-calculus modulo rewriting}.
 %
 In particular, the rules in \autoref{fig:lpTermSyntax}
-define the \emph{terms} of the $\lp$-calculus.
+define the \emph{terms} of the $λΠ$-calculus.
 %
 Each term is either a \emph{variable} $x$,
 a \emph{constant} $κ$,
@@ -42,12 +42,12 @@ and \emph{$β$-reduction} $\prn{t ⇝_{β} t'}$.
 % 	%
 % \end{boxfigure}
 A \emph{typing} is an expression of the form $\prn{t : t'}$
-for some terms $t$, $t'$, and a \emph{context} is a set of
+for some terms $t$, $t'$, and a \emph{context} is a list of
 typings of the form $\prn{x : t}$ for some variable $x$ and
 term $t$.
 %
-Hereinafter, given a context $Γ$ and a typing $\prn{x : t}$,
-let $\prn{Γ, \prn{x : t}}$ denote the extension $Γ ∪ \{x : t\}$.
+% Hereinafter, given a context $Γ$ and a typing $\prn{x : t}$,
+% let $\prn{Γ, \prn{x : t}}$ denote the extension $Γ ∪ \{x : t\}$.
 %
 A \emph{rewrite rule} is an expression of the form
 $\prn{ℓ ↪ r}$, where $ℓ$ and $r$ are terms such that
@@ -63,18 +63,17 @@ for some terms $\plur t n$.
 % 	$$ \lpWfRules $$
 % \end{boxfigure}
 % ----
-A \emph{signature} is a set whose elements are either
-typings or rewrite rules, where each typing
-is of the form $\prn{κ : t}$ for some constant $κ$ and
-term $t$.
+A \emph{signature} is a list of typings and rewrite rules,
+where each typing has the form $\prn{κ : t}$
+for some constant $κ$ and term $t$ with no free variables.
 %
 Given some signature $Σ$, let $R_{Σ}$ be the smallest
 binary relation such that:
 %
 \begin{enumerate}
 	\item $\prn{ℓ ↪ r} ∈ Σ$ implies $(ℓ, r) ∈ R_{Σ}$, and
-	\item $R_{Σ}$ is closed under application, abstraction,
-	      and substitution.
+	\item $R_{Σ}$ is \emph{congruent} under application,
+	  abstraction, and substitution.
 \end{enumerate}
 %
 %, abstraction and substitution.  $R$
@@ -115,7 +114,7 @@ where $\prn{Γ ⊢_{Σ} e : t}$ may be read as
 the $\lambdapi$ proof assistant.
 %
 Note that the set of terms differs from that of the `pure'
-$\lp$-calculus presented earlier.
+$λΠ$-calculus presented earlier.
 %
 The main differences are made to support \emph{implicit bindings},
 which allow the user to omit some subterms and have them
@@ -145,7 +144,7 @@ pattern variables occurring in some pattern $p$.
 
 % ---------------------
 A $\lambdapi$ \emph{file} is a list of \emph{commands},
-which should be seen as a representation of a $\lp$-signature.
+which should be seen as a representation of a $λΠ$-signature.
 % Each command is either a \emph{symbol declaration}
 % (\mtt{symbol}), \emph{rewrite rule declaration} (\mtt{rule}),
 % or an \emph{import} (\mtt{require}).
@@ -247,9 +246,9 @@ abstractions can enable the user to omit some terms in
 applications, and have them automatically `inferred' by
 $\lambdapi$.
 %
-This mechanism is particularly useful for implementing
-\emph{type polymorphism}, where a function may have
-different behaviours depending on the types of its arguments.
+% This mechanism is particularly useful for implementing
+% \emph{type polymorphism}, where a function may have
+% different behaviours depending on the types of its arguments.
 %
 To make this notion more precise, consider the following
 symbol declaration:

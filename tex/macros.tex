@@ -5,6 +5,9 @@
 \newcommand{\mtt}[1]{{\color{MaterialPink500}{\texttt{#1}}}}
 \newcommand{\ev}[1]{{\color{MaterialGrey800}{\texttt{#1}}}}
 
+\newcommand{\cpc}{\msf{CPC}}
+\newcommand{\tsm}[1]{{\small\text{#1}}}
+
 \newcommand{\ptn}[1]{{\color{MaterialPurple500}{\texttt{#1}}}}
 \newcommand{\mcomment}[1]{{\color{MaterialIndigo500}{\text{#1}}}}
 \newcommand{\wrapp}[4]{{\color{#1}{#2}}{#4}{\color{#1}{#3}}}
@@ -12,6 +15,7 @@
 
 \newcommand{\cvc}[1]{\textsc{cvc{#1}}}
 \newcommand{\verit}{\textsc{veriT}}
+\newcommand{\eunoia}{\textsc{Eunoia}}
 
 % ----- abstract syntax ----------
 % plurality, binding
@@ -36,15 +40,12 @@
 \newcommand{\apptwo}[3]{#1\,#2\,#3}
 \newcommand{\appthree}[4]{#1\,#2\,#3\,#4}
 \newcommand{\appfour}[5]{#1\,#2\,#3\,#4\,#5}
-\newcommand{\appldots}[3]{((\app{#1}{#2})\,\ldots\,{#3})}
+\newcommand{\appldots}[3]{((\app{#1}{#2})\,\ldots\,⋅\,{#3})}
 
 % universes
 \newcommand{\PROP}{\mtt{prop}}
 \newcommand{\TYPE}{\mtt{type}}
 \newcommand{\KIND}{\mtt{kind}}
-
-% sets for syntactic categories
-\newcommand{\Term}{\msf{Term}}
 
 
 
@@ -54,14 +55,13 @@
 \newcommand{\eapp}[2]{\epar{#1\ #2}}
 \newcommand{\earr}[1]{\epar{\mtt{->}\ #1}}
 
-\newcommand{\eo}{\msf{eo}}
 \newcommand{\sym}[1]{\msf{s}_{\msf{#1}}}
 % \newcommand{\eoapp}[2]{\prn{#1\ #2}}
 % \newcommand{\earr}[1]{\mtt{#1}}
 \newcommand{\ctyp}{\mbf{ctyp}}
 \newcommand{\att}{\mbf{att}}
 
-\newcommand{\hyp}{\mbf{hyp}}
+\newcommand{\prf}{\mbf{prf}}
 \newcommand{\step}{\mbf{step}}
 
 \newcommand{\eor}{\mtt{or}}
@@ -113,7 +113,7 @@
 			    {⦂} & \epar{t\ t'}
 		    \end{array}
 		  & \mcomment{(term pairs)}
-		\\
+		\\[1mm]
 		δ & \begin{array}[t]{c@{\ }l}
 			    {⦂} & \epar{\mtt{declare-const}\ s\ t\ \maybe{α}}                               \\
 			    {∣} & \epar{\mtt{declare-parameterized-const}\ s\ \epar{\vec{ρ}}\ t\ \maybe{α}} \\
@@ -129,7 +129,7 @@
 			    \\ & \quad \maybe{\mtt{:requires}\ \epar{\vec{r}}}\
 			    \\ & \quad \mtt{:conclusion}\ {t_{\text{conc}}}
 			    {\color{MaterialGrey600}{\texttt{)}}}                                           \\
-			    {∣} & \epar{\mtt{include}\ μ}                                                   \\
+			    {∣} & \epar{\mtt{include}\ μ}
 		    \end{array}
 		  & \mcomment{(std. commands)}
 	\end{array}
@@ -137,10 +137,10 @@
 
 \newcommand{\eoPrfCommandSyntax}{
 	\begin{array}[t]{r@{\ }l@{\quad}l}
-		π & \begin{array}[t]{c@{\ }l}{⦂}
-			        & \epar{\mtt{assume}\ s\ φ}       \\
+		π & \begin{array}[t]{c@{\ }l}
+		    {⦂} & \epar{\mtt{assume}\ s\ φ}       \\
 			    % {∣} & \prn{\mtt{assume-push}\ s\ e}      \\
-			    {∣} & \epar{\mtt{step}\ s\ φ\
+			   {∣} & \epar{\mtt{step}\ s\ φ\
 			    \some{\mtt{:rule}\ s'}\
 			    \maybe{\mtt{:premises}\ {\vec ψ}}\
 			    \maybe{\mtt{:args}\ {\vec t}}}\\
@@ -149,19 +149,21 @@
 			    % \maybe{\mtt{:premises}\ {\vec φ}}\
 			    % \maybe{\mtt{:args}\ {\vec e}} }
 		    \end{array}
-		  & \mcomment{(proof commands)}
-	\end{array}}
+		  & \mcomment{(prf. commands)}
+	\end{array}
+}
 
 % --- macros for `lp.tex` ------------------------------
-\newcommand{\lp}{λΠ}
+\newcommand{\esc}[1]{\wrapp{MaterialGrey600}{⦃}{⦄}{#1}}
 \newcommand{\var}[1]{\msf{v}_{#1}}
+\newcommand{\lbl}[2]{\rname{#1}\quad{#2}}
 \newcommand{\lpTermSyntax}{
 	\begin{array}[t]{r@{\ }l@{\quad}r}
 		% ------------------------------------- %
-		u & {⦂}\ \TYPE ∣ \KIND
+		μ & {⦂}\ \TYPE ∣ \KIND
 		  & \mcomment{(universes)}                                                             \\
 		% ------------------------------------- %
-		t & {⦂}\ x ∣ κ ∣ u ∣ \prn{\app{t}{t'}} ∣ \prn{\lam{x : t}{t'}} ∣ \prn{\pii{x : t}{t'}}
+		t & {⦂}\ x ∣ κ ∣ μ ∣ \prn{\app{t}{t'}} ∣ \prn{\lam{x : t}{t'}} ∣ \prn{\pii{x : t}{t'}}
 		  & \mcomment{(terms)}
 		% ------------------------------------- %
 	\end{array}
@@ -199,7 +201,7 @@
 \newcommand{\constRule}{
 	\begin{prooftree}
 		\hypo{\wf Γ}
-		\hypo{\judge Γ t u}
+		\hypo{\judge {} t μ}
 		\infer2[$\prn{κ : t}∈ Σ$]{ \judge Γ κ t }
 	\end{prooftree}
 }
@@ -207,15 +209,15 @@
 \newcommand{\prodRule}{
 	\begin{prooftree}
 		\hypo{\judge Γ t {\TYPE}}
-		\hypo{\judge{Γ, \prn{x : t}}{t'}{u'}}
-		\infer2{\judge Γ {\prn{\pii {x : t} {t'}}} {u'} }
+		\hypo{\judge{Γ, \prn{x : t}}{t'}{μ'}}
+		\infer2{\judge Γ {\prn{\pii {x : t} {t'}}} {μ'} }
 	\end{prooftree}
 }
 
 \newcommand{\absRule}{
 	\begin{prooftree}
 		\hypo{\judge{Γ, \prn{x : t}} e {t'}}
-		\hypo{\judge Γ {\prn{\pii {x : t} {t'}}} u}
+		\hypo{\judge Γ {\prn{\pii {x : t} {t'}}} μ}
 		\infer2{\judge Γ {\prn{\lam {x : t} {e}}} {\prn{\pii {x : t} {t'}}} }
 	\end{prooftree}
 }
@@ -231,8 +233,8 @@
 \newcommand{\convRule}{
 	\begin{prooftree}
 		\hypo{\judge Γ e t}
-		\hypo{\judge Γ {t'} {u}}
-		\infer2[$\prn{t ≡_{Σ} t'}$]{\judge Γ {e} {t'}}
+		\hypo{\judge Γ {t'} {μ}}
+		\infer2[$\prn{t ≡_{βΣ} t'}$]{\judge Γ {e} {t'}}
 	\end{prooftree}
 }
 
@@ -244,8 +246,8 @@
 
 \newcommand{\wfRuleVar}{
 	\begin{prooftree}
-		\hypo{ \judge Γ t u }
-		\infer1{ \wf{(Γ, \prn{x : t})}}
+		\hypo{ \judge Γ t μ }
+		\infer1[$x ∉ \mbf{dom}(Γ)$]{ \wf{(Γ, \prn{x : t})}}
 	\end{prooftree}
 }
 
@@ -253,20 +255,20 @@
 
 \newcommand{\lpTypingRules}{
 	\begin{array}[t]{c}
-		\rname{typ} \ {⦂}\ \  \typeRule  \\[4mm]
-		\rname{con} \ {⦂}\ \  \constRule \\[4mm]
-		\rname{var} \ {⦂}\ \  \varRule   \\[4mm]
-		\rname{prod} \ {⦂}\ \  \prodRule \\[4mm]
-		\rname{fun} \ {⦂}\ \  \absRule   \\[4mm]
-		\rname{app} \ {⦂}\ \  \appRule   \\[4mm]
-		\rname{conv} \ {⦂}\ \  \convRule \\[4mm]
+		\lbl{var}{\varRule}    \qquad  \lbl{con}{\constRule}
+		\\[6mm]
+		\lbl{univ}{\typeRule}  \qquad \lbl{prod}{\prodRule}
+		\\[6mm]
+		\lbl{fun}{\absRule} \\[6mm]
+		\lbl{app}{\appRule} \\[6mm]
+		\lbl{conv}{\convRule}
 	\end{array}
 }
-
 \newcommand{\lpWfRules}{
-	\begin{array}[t]{c@{\qquad}c}
-		\rname{wf0} \ \ {⦂}\ \  \wfRuleEmp
-		 & \rname{wf+} \ \ {⦂}\ \  \wfRuleVar
+	\begin{array}[t]{c}
+		\lbl{wf0}{\wfRuleEmp}
+		\qquad
+		\lbl{wf+}{\wfRuleVar}
 	\end{array}
 }
 
@@ -275,6 +277,8 @@
 \newcommand{\lambdapi}{\textsc{LambdaPi}}
 \newcommand{\llam}{\binddot{\msf{λ}}}
 \newcommand{\ppii}{\binddot{\msf{Π}}}
+
+% \newcommand{\symbol}{\mtt{symbol}}
 
 \newcommand{\prm}[1]{\mbf{#1}}
 \newcommand{\xsym}[1]{\mtt{@}{#1}}
@@ -331,6 +335,18 @@
 
 % \newcommand{\symb}[1]{\mtt{rule}\ {#1};}
 
-\newcommand{\Set}{\msf{Set}}
-\newcommand{\El}[1]{\msf{El}\,{#1}}
-\newcommand{\Ell}[1]{\msf{El}\,\prn{#1}}
+\newcommand{\Set}{\texttt{Set}}
+\newcommand{\El}[1]{\texttt{El}\,{#1}}
+\newcommand{\Ell}[1]{\texttt{El}\,\prn{#1}}
+
+% ------- translation stuff -----------
+\newcommand{\Term}{\msf{Term}}
+
+%
+\newcommand{\eo}{\msf{eo}}
+\newcommand{\lp}{\msf{lp}}
+\newcommand{\trans}[1]{\left⟦{#1}\right⟧}
+\newcommand{\tm}[1]{\trans{#1}_\msf{tm}}
+\newcommand{\ty}[1]{\trans{#1}_\msf{ty}}
+\newcommand{\cmd}[1]{\trans{#1}_\msf{cmd}}
+\newcommand{\ctx}[1]{\trans{#1}_\msf{ctx}}
