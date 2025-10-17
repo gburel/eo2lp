@@ -32,7 +32,7 @@ Let $ν$ and $α$ range over \emph{variable attributes}
 and \emph{constant attributes} respectively.
 %
 Then, each \emph{parameter} $ρ$ consists of a symbol $s$,
-a term $t$, and possibly a variable attribute $ν$.
+a term $t$ (the type of the paramater), and possibly a variable attribute $ν$.
 %
 
 The rules of \autoref{fig:eo-syntax} define a subset
@@ -79,7 +79,7 @@ We may write $\prn{δ ⊢ s(\vec ρ) : t}$ to express
 that the command $δ$ declares $t$ as the \emph{type} of $s$
 with respect to a parameters $\vec ρ$.
 %
-Furthermore, a constant attribute $α$ is given by $δ$,
+Furthermore, if a constant attribute $α$ is given by $δ$,
 we may write $\prn{δ ⊢ s(\vec ρ) ∷ α}$.
 %
 
@@ -143,7 +143,7 @@ $$
   [\;
     \epar{{\eapp{s^⭑}{\plur t m}}\ φ}
     ∣
-\epar{x_1\ y_1}\ldots\epar{x_k\ y_k}
+\epar{x_1\ y_1}\ldots\epar{x_k\ y_k}%%Guillaume: should be o ?
   \;]
 \end{array}
 $$
@@ -257,6 +257,7 @@ $$
 \econcat{\eor}{\ev y}{\eapp{\eor}{\ev z\ \false}}
 }
 $$
+%%Guillaume: explain the eo::concat function
 %
 The $\mtt{:list}$ attribute alters the elaboration strategy
 under the assumption that $\ev y$ will (eventually) be
@@ -336,6 +337,8 @@ and $t_i' ≔ \elab{Δ, \vec ρ}[t_i]$.
 % for $1 ≤ i ≤ n$.
 
 \end{definition}
+$\foldl(G, a, l)$ (resp.\ $\foldr(G, a, l)$) is the standard
+left fold (resp.\ right fold) using combining function $G$ and accumulator $a$ on list $l$.
 %
 
 
